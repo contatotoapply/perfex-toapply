@@ -311,8 +311,8 @@ function get_company_logo($uri = '', $href_class = '', $type = '')
     $logoURL = hooks()->apply_filters('logo_href', $logoURL);
 
     if ($company_logo != '') {
-        $logo = '<a href="' . $logoURL . '" class="logo img-responsive' . ($href_class != '' ? ' ' . $href_class : '') . '">
-        <img src="' . base_url('uploads/company/' . $company_logo) . '" class="img-responsive" alt="' . e($company_name) . '">
+        $logo = '<a href="' . $logoURL . '" class="logo img-responsive' . ($href_class != '' ? ' ' . $href_class : '') . '" style="padding:0px">
+        <img src="' . base_url('uploads/company/' . $company_logo) . '" class="img-responsive" style="width: auto; height: 85px" alt="' . e($company_name) . '">
         </a>';
     } elseif ($company_name != '') {
         $logo = '<a href="' . $logoURL . '" class="' . $href_class . ' logo logo-text">' . e($company_name) . '</a>';
