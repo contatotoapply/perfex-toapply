@@ -531,9 +531,9 @@ $lang['wd_saturday']  = 'Sábado';
 $lang['wd_sunday']    = 'Domingo';
 
 # Admin Left Sidebar
-$lang['als_dashboard']             = 'Painel';
+$lang['als_dashboard']             = 'Dashboard Apply';
 $lang['als_clients']               = 'Clientes';
-$lang['als_leads']                 = 'Leads';
+$lang['als_leads']                 = 'CRM Apply';
 $lang['als_contracts']             = 'Contratos';
 $lang['als_sales']                 = 'Vendas';
 $lang['als_staff']                 = 'Colaboradores';

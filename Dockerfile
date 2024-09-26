@@ -4,6 +4,8 @@ WORKDIR /var/www/html
 
 COPY php.ini /usr/local/etc/php/conf.d
 
+RUN a2enmod rewrite
+
 RUN apt-get update && apt-get install -y \
     libxml2-dev \
     libzip-dev \
