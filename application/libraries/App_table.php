@@ -230,7 +230,7 @@ class App_table
             return in_array($field['type'], $this->excludedCustomFields) ||
                 !array_key_exists($field['type'], $rulesMap);
         })->map(function ($field) use ($rulesMap, $isAdmin) {
-            $options = collect(explode(',', $field['options']))
+            $options = collect(explode(',', (string)$field['options']))
                 ->map(fn ($option) => trim($option))
                 ->filter()
                 ->map(fn ($option) => ['value' => $option, 'label' => $option]);

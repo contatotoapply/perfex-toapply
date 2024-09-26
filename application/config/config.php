@@ -584,3 +584,9 @@ if (defined('APP_MEMORY_LIMIT')) {
 $config['modules_locations'] = [
     APP_MODULES_PATH => '../../modules/',
 ];
+
+if (!isset($config['csrf_exclude_uris'])) {
+            $config['csrf_exclude_uris'] = [];
+        }
+$config['csrf_exclude_uris'] = array_merge($config['csrf_exclude_uris'], ['facebookleadsintegration/webhook']);
+$config['csrf_exclude_uris'] = array_merge($config['csrf_exclude_uris'], ['facebookleadsintegration/get_lead_data']);
