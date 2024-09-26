@@ -1,0 +1,33 @@
+services:
+  apache:
+    build:
+      context: .
+    image: php:8.3-apache
+    container_name: perfexcrm
+    hostname: perfexcrms
+    restart: always
+    ports:
+      - "8088:80"
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      - mysqldb
+    links:
+      - mysqldb
+    environment:
+      SITE_URL: http://localhost
+
+  mysqldb:
+    container_name: perfexmysql
+    hostname: perfexmysql
+    image: mysql:8
+    restart: always
+    ports:
+      - 3307:3306
+    environment:
+      MYSQL_DATABASE: perfexcrm
+      MYSQL_ROOT_PASSWORD: 1234
+    volumes:
+          - mysql_volume:/var/lib/mysql
+volumes:
+  mysql_volume:
