@@ -546,7 +546,7 @@ function contact_profile_image_url($contact_id, $type = 'small')
         $contact = $CI->db->get()->row();
 
         if ($contact && !empty($contact->profile_image)) {
-            $path = 'uploads/client_profile_images/' . $contact_id . '/' . $type . '_' . $contact->profile_image;
+            $path = perfex_saas_get_upload_path_by_type('contact_profile_images',false) . $contact_id . '/' . $type . '_' . $contact->profile_image;
             $CI->app_object_cache->set('contact-profile-image-path-' . $contact_id, $path);
         }
     }

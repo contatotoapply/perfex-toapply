@@ -132,7 +132,8 @@ define('TEMP_FOLDER', FCPATH . 'temp' . '/');
 /**
  * Customer attachments folder from profile
  */
-define('CLIENT_ATTACHMENTS_FOLDER', FCPATH . 'uploads/clients' . '/');
+return;
+define('_CLIENT_ATTACHMENTS_FOLDER', FCPATH . 'uploads/clients' . '/');
 /**
  * All tickets attachments
  */
