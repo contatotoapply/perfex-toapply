@@ -33,6 +33,7 @@ RUN docker-php-ext-install \
     mysqli \
     imap \
     gd \
-    zip
+    zip \
+    pdo_mysql
 
 EXPOSE 8080 3306

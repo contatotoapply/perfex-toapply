@@ -3,8 +3,8 @@
 defined('BASEPATH') or exit('No direct script access allowed');
 
 /*
-Module Name: Menu Setup
-Description: Default module to apply changes to the menus
+Module Name: Menu Setup | Configuração de Menu
+Description: Módulo padrão para aplicar alterações nos menus.
 Version: 2.3.0
 Requires at least: 2.3.*
 */

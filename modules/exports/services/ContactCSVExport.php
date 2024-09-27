@@ -50,7 +50,7 @@ class ContactCSVExport extends CSVExport
     private function getProfileImageUrl(int $contactId, ?string $profileImage): ?string
     {
         if (!empty($profileImage)) {
-            $path = 'uploads/client_profile_images/' . $contactId . '/small_' . $profileImage;
+            $path = perfex_saas_get_upload_path_by_type('contact_profile_images',false) . $contactId . '/small_' . $profileImage;
 
             if (file_exists($path)) {
                 return base_url($path);
