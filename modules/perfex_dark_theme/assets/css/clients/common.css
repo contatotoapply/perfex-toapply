@@ -1,0 +1,75 @@
+body .navbar-default {
+    z-index: 1;
+    width: 230px;
+    position: fixed;
+    background-color: #fff;
+    height: 100vh;
+}
+
+.btn-primary, .available_time_info.hwp {
+    background: rgb(44, 114, 243) !important;
+}
+
+body .cb-form-wrapper h4,
+body #appointments-form h4 {
+    color: #fff;
+}
+
+body #wrapper .btn-primary,
+body .btn-pfxcbsubmit {
+    background: rgb(44, 114, 243) !important;
+    border-color: rgb(44, 114, 243) !important;
+}
+
+body .cb-form-wrapper {
+    top: calc(100% - 93.5%) !important;
+}
+
+body .btn-pfxcbsubmit:focus,
+body .btn-pfxcbsubmit:active,
+body .btn-pfxcbsubmit:hover,
+body #wrapper .btn-primary.active.focus,
+body #wrapper .btn-primary.active:focus,
+body #wrapper .btn-primary.active:hover,
+body #wrapper .btn-primary:active.focus,
+body #wrapper .btn-primary:active:focus,
+body #wrapper .btn-primary:active:hover,
+body #wrapper .open > .dropdown-toggle.btn-primary.focus,
+body #wrapper .open > .dropdown-toggle.btn-primary:focus,
+body #wrapper .open > .dropdown-toggle.btn-primary:hover {
+    background: rgb(44, 114, 243) !important;
+    border-color: rgb(44, 114, 243) !important;
+}
+
+body #perfex-callbacks-form .dropdown-menu > li > a:focus, .dropdown-menu > li > a:hover {
+    background: #203e82 !important;
+}
+
+body #perfex-callbacks-form .message_wrapper div.inner.open ul li a > span {
+    color: #fff;
+}
+
+body.appointments-external-form .form-group input {
+    background: #243148 !important;
+    border-color: #344561 !important;
+    color: #fff;
+}
+
+body.appointments-external-form,
+body.appointments-external-form #wrapper {
+    background: rgb(25 34 49) !important;
+}
+
+body .cb-form-wrapper {
+    background: #24344d;
+    border: none;
+}
+
+body .main_wrapper {
+    background: #24344d;
+    margin-top: 47px;
+}
+
+body .navbar.navbar-default.header .container ul.nav.navbar-nav.navbar-right {
+    margin-right: 92px;
+}
