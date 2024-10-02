@@ -1,0 +1,45 @@
+nav {
+  background: #132230 !important;
+}
+nav  a{
+  color: #fff !important;
+}
+
+body {
+  background: #111c25;
+}
+h2, h1 {
+  color: #fff;
+}
+ul.dropdown-menu.fadeIn li a {
+  color: #333 !important;
+
+}
+.navbar-default {
+  border:none;
+}
+
+li a:hover,
+li.active a {
+  color: #333 !important;
+}
+
+body.appointments-external-form label {
+  color: #fff;
+}
+.login_icon {
+  display: none;
+}
+
+h1,h2,h3,h4,h5,h6,b, a > span{
+  color: #fff !important;
+}
+
+/* chat */
+.msg p {
+  font-size: 0.9rem !important;
+}
+
+.circle-unseen {
+  margin-top: 0 !important;
+}
