@@ -1627,7 +1627,8 @@ function perfex_saas_http_host($server, $use_forwarded_host = true)
  * @param array $server Optional
  * @return bool
  */
-function perfex_saas_is_https($server = [])
+
+/* function perfex_saas_is_https($server = [])
 {
     if (function_exists('is_https') && is_https()) {
         return true;
@@ -1658,7 +1659,7 @@ function perfex_saas_is_https($server = [])
     }
 
     return false;
-}
+} */
 
 /**
  * Get the URL origin based on the server variables.
@@ -1669,7 +1670,7 @@ function perfex_saas_is_https($server = [])
  */
 function perfex_saas_url_origin($server, $use_forwarded_host = true, $include_full_uri = false)
 {
-    $ssl = perfex_saas_is_https($server);
+    $ssl = true;
     $protocol = $ssl ? 'https' : 'http';
     $port = $server['SERVER_PORT'];
     $port = ((!$ssl && $port == '80') || ($ssl && $port == '443')) ? '' : ':' . $port;
