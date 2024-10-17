@@ -12,15 +12,21 @@ class Campaigns_model extends App_Model
 
     public function save($post_data)
     {
-        unset($post_data['document']);
-        unset($post_data['image']);
+        $source = isset($post_data['source']) ? $post_data['source'] : '';
+        $status = isset($post_data['status']) ? $post_data['status'] : '';
+        $group = isset($post_data['groups']) ? json_encode($post_data['groups']) : '';
+        unset($post_data['document'], $post_data['image'], $post_data['source'], $post_data['status'], $post_data['groups']);
         $post_data['scheduled_send_time']   = isset($post_data['scheduled_send_time']) ? to_sql_date($post_data['scheduled_send_time'], true) : null;
         $post_data['send_now']              = (isset($post_data['send_now']) ? 1 : 0);
         $post_data['select_all']            = (isset($post_data['select_all']) ? 1 : 0);
         $post_data['header_params']         = json_encode($post_data['header_params'] ?? []);
         $post_data['body_params']           = json_encode($post_data['body_params'] ?? []);
         $post_data['footer_params']         = json_encode($post_data['footer_params'] ?? []);
-
+        $post_data['rel_data'] = json_encode([
+            'source' => $source,
+            'status' => $status,
+            'group' => $group,
+        ]);
         $rel_ids  = (isset($post_data['lead_ids']) && !empty($post_data['lead_ids'])) ? $post_data['lead_ids'] : ((isset($post_data['contact_ids']) && !empty($post_data['contact_ids'])) ? $post_data['contact_ids'] : '');
         $rel_type = (isset($post_data['lead_ids']) && !empty($post_data['lead_ids'])) ? 'leads' : ((isset($post_data['contact_ids']) && !empty($post_data['contact_ids'])) ? 'contacts' : '');
 
@@ -123,6 +129,7 @@ class Campaigns_model extends App_Model
     {
         $campaign = $this->get($id);
         $delete = $this->db->delete(db_prefix().'wtc_campaigns', ['id' => $id]);
+        $delete = ($this->db->affected_rows() > 0) ? true : false;
 
         if ($delete) {
             $this->db->delete(db_prefix().'wtc_campaign_data', ['campaign_id' => $id]);
@@ -135,6 +142,7 @@ class Campaigns_model extends App_Model
 
         return [
             'message' => $delete ? _l('deleted', _l('campaign')) : _l('something_went_wrong'),
+            'status' => ($delete) ? true : false
         ];
     }
 
@@ -161,5 +169,19 @@ class Campaigns_model extends App_Model
             'message' => ($update) ? _l('attchment_deleted_successfully') : _l('something_went_wrong'),
             'url'     => ($campaign['is_bot'] == 1) ? admin_url('whatsbot/bots/bot/template/' . $id) : admin_url('whatsbot/campaigns/campaign/' . $id),
         ];
+    }
+
+    public function get_contacts_where_group($group)
+    {
+        $customers = $this->db->select('customer_id')->distinct()->where_in('groupid', $group)->get(db_prefix() . 'customer_groups')->result_array();
+        $customers = array_column($customers, 'customer_id');
+        $contacts = [];
+        foreach ($customers as $customer_id) {
+            $data = $this->clients_model->get_contacts($customer_id);
+            if (!empty($data)) {
+                $contacts = array_merge($contacts, $data);
+            }
+        }
+        return $contacts;
     }
 }

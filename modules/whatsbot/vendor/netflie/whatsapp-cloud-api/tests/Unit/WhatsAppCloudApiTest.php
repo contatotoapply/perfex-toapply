@@ -14,6 +14,9 @@ use Netflie\WhatsAppCloudApi\Message\Contact\PhoneType;
 use Netflie\WhatsAppCloudApi\Message\CtaUrl\TitleHeader;
 use Netflie\WhatsAppCloudApi\Message\Media\LinkID;
 use Netflie\WhatsAppCloudApi\Message\Media\MediaObjectID;
+use Netflie\WhatsAppCloudApi\Message\MultiProduct\Action as MultiProductAction;
+use Netflie\WhatsAppCloudApi\Message\MultiProduct\Row as MultiProductRow;
+use Netflie\WhatsAppCloudApi\Message\MultiProduct\Section as MultiProductSection;
 use Netflie\WhatsAppCloudApi\Message\OptionsList\Action;
 use Netflie\WhatsAppCloudApi\Message\OptionsList\Row;
 use Netflie\WhatsAppCloudApi\Message\OptionsList\Section;
@@ -719,6 +722,45 @@ final class WhatsAppCloudApiTest extends TestCase
         $this->assertEquals(false, $response->isError());
     }
 
+    public function test_send_location_request()
+    {
+        $to = $this->faker->phoneNumber;
+        $url = $this->buildMessageRequestUri();
+        $message = $this->faker->text(1024);
+
+        $body = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $to,
+            'type' => 'interactive',
+            'interactive' => [
+                'type' => 'location_request_message',
+                'body' => ['text' => $message],
+                'action' => [
+                    'name' => 'send_location',
+                ],
+            ],
+        ];
+        $headers = [
+            'Authorization' => 'Bearer ' . $this->access_token,
+        ];
+
+        $this->client_handler
+            ->postJsonData($url, $body, $headers, Argument::type('int'))
+            ->shouldBeCalled()
+            ->willReturn(new RawResponse($headers, $this->successfulMessageNodeResponse(), 200));
+
+        $response = $this->whatsapp_app_cloud_api->sendLocationRequest(
+            $to,
+            $message
+        );
+
+        $this->assertEquals(200, $response->httpStatusCode());
+        $this->assertEquals(json_decode($this->successfulMessageNodeResponse(), true), $response->decodedBody());
+        $this->assertEquals($this->successfulMessageNodeResponse(), $response->body());
+        $this->assertEquals(false, $response->isError());
+    }
+
     public function test_send_contact()
     {
         $to = $this->faker->phoneNumber;
@@ -914,7 +956,7 @@ final class WhatsAppCloudApiTest extends TestCase
             'parameters' => [
                 'display_text' => $this->faker->text(24),
                 'url' => $this->faker->url,
-            ]
+            ],
         ];
 
         $body = [
@@ -1145,6 +1187,128 @@ final class WhatsAppCloudApiTest extends TestCase
         $this->assertEquals(false, $response->isError());
     }
 
+    public function test_send_catalog_message()
+    {
+        $to = $this->faker->phoneNumber;
+        $url = $this->buildMessageRequestUri();
+        $message = $this->faker->text(1024);
+        $footer = $this->faker->text(60);
+        $product_retailer_id = $this->faker->text;
+
+        $body = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $to,
+            'type' => 'interactive',
+            'interactive' => [
+                'type' => 'catalog_message',
+                'body' => ['text' => $message],
+                'footer' => ['text' => $footer],
+                'action' => [
+                    'name' => 'catalog_message',
+                    'parameters' => ['thumbnail_product_retailer_id' => $product_retailer_id],
+                ],
+            ],
+        ];
+        $headers = [
+            'Authorization' => 'Bearer ' . $this->access_token,
+        ];
+
+        $this->client_handler
+            ->postJsonData($url, $body, $headers, Argument::type('int'))
+            ->shouldBeCalled()
+            ->willReturn(new RawResponse($headers, $this->successfulMessageNodeResponse(), 200));
+
+        $response = $this->whatsapp_app_cloud_api->sendCatalog(
+            $to,
+            $message,
+            $footer,
+            $product_retailer_id
+        );
+
+        $this->assertEquals(200, $response->httpStatusCode());
+        $this->assertEquals(json_decode($this->successfulMessageNodeResponse(), true), $response->decodedBody());
+        $this->assertEquals($this->successfulMessageNodeResponse(), $response->body());
+        $this->assertEquals(false, $response->isError());
+    }
+
+    public function test_send_multi_product()
+    {
+        $to = $this->faker->phoneNumber;
+        $url = $this->buildMessageRequestUri();
+        $header = $this->faker->text(20);
+        $message = $this->faker->text(1024);
+        $footer = $this->faker->text(60);
+        $catalog_id = $this->faker->randomNumber();
+
+        $rows1 = [
+            ['product_retailer_id' => $this->faker->uuid],
+            ['product_retailer_id' => $this->faker->uuid],
+            ['product_retailer_id' => $this->faker->uuid],
+        ];
+
+        $rows2 = [
+            ['product_retailer_id' => $this->faker->uuid],
+            ['product_retailer_id' => $this->faker->uuid],
+        ];
+
+
+        $sections = [
+            ['title' => $this->faker->text, 'product_items' => $rows1],
+            ['title' => $this->faker->text, 'product_items' => $rows2],
+        ];
+        $actions = ['catalog_id' => $catalog_id, 'sections' => $sections];
+
+        $body = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $to,
+            'type' => 'interactive',
+            'interactive' => [
+                'type' => 'product_list',
+                'header' => ['type' => 'text', 'text' => $header],
+                'body' => ['text' => $message],
+                'footer' => ['text' => $footer],
+                'action' => $actions,
+            ],
+        ];
+
+        $headers = [
+            'Authorization' => 'Bearer ' . $this->access_token,
+        ];
+
+        $this->client_handler
+            ->postJsonData($url, $body, $headers, Argument::type('int'))
+            ->shouldBeCalled()
+            ->willReturn(new RawResponse($headers, $this->successfulMessageNodeResponse(), 200));
+
+        $actionSections = [];
+
+        foreach ($actions['sections'] as $section) {
+            $sectionRows = [];
+
+            foreach ($section['product_items'] as $row) {
+                $sectionRows[] = new MultiProductRow($row['product_retailer_id']);
+            }
+
+            $actionSections[] = new MultiProductSection($section['title'], $sectionRows);
+        }
+
+        $response = $this->whatsapp_app_cloud_api->sendMultiProduct(
+            $to,
+            $catalog_id,
+            new MultiProductAction($actionSections),
+            $header,
+            $message,
+            $footer
+        );
+
+        $this->assertEquals(200, $response->httpStatusCode());
+        $this->assertEquals(json_decode($this->successfulMessageNodeResponse(), true), $response->decodedBody());
+        $this->assertEquals($this->successfulMessageNodeResponse(), $response->body());
+        $this->assertEquals(false, $response->isError());
+    }
+
     public function test_mark_a_message_as_read()
     {
         $url = $this->buildMessageRequestUri();
@@ -1163,6 +1327,81 @@ final class WhatsAppCloudApiTest extends TestCase
             ->willReturn(new RawResponse($headers, $this->successfulMessageNodeResponse(), 200));
 
         $response = $this->whatsapp_app_cloud_api->markMessageAsRead('<message-id>');
+
+        $this->assertEquals(200, $response->httpStatusCode());
+        $this->assertEquals(json_decode($this->successfulMessageNodeResponse(), true), $response->decodedBody());
+        $this->assertEquals($this->successfulMessageNodeResponse(), $response->body());
+        $this->assertEquals(false, $response->isError());
+    }
+
+    public function test_send_reaction_message()
+    {
+        $to = $this->faker->phoneNumber;
+        $url = $this->buildMessageRequestUri();
+        $emoji = $this->faker->emoji;
+        $message_id = $this->faker->uuid;
+
+        $body = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $to,
+            'type' => 'reaction',
+            'reaction' => [
+                'message_id' => $message_id,
+                'emoji' => $emoji,
+            ],
+        ];
+        $headers = [
+            'Authorization' => 'Bearer ' . $this->access_token,
+        ];
+
+        $this->client_handler
+            ->postJsonData($url, $body, $headers, Argument::type('int'))
+            ->shouldBeCalled()
+            ->willReturn(new RawResponse($headers, $this->successfulMessageNodeResponse(), 200));
+
+        $response = $this->whatsapp_app_cloud_api->sendReaction(
+            $to,
+            $message_id,
+            $emoji
+        );
+
+        $this->assertEquals(200, $response->httpStatusCode());
+        $this->assertEquals(json_decode($this->successfulMessageNodeResponse(), true), $response->decodedBody());
+        $this->assertEquals($this->successfulMessageNodeResponse(), $response->body());
+        $this->assertEquals(false, $response->isError());
+    }
+
+    public function test_send_remove_reaction_message()
+    {
+        $to = $this->faker->phoneNumber;
+        $url = $this->buildMessageRequestUri();
+        $emoji = '';
+        $message_id = $this->faker->uuid;
+
+        $body = [
+            'messaging_product' => 'whatsapp',
+            'recipient_type' => 'individual',
+            'to' => $to,
+            'type' => 'reaction',
+            'reaction' => [
+                'message_id' => $message_id,
+                'emoji' => $emoji,
+            ],
+        ];
+        $headers = [
+            'Authorization' => 'Bearer ' . $this->access_token,
+        ];
+
+        $this->client_handler
+            ->postJsonData($url, $body, $headers, Argument::type('int'))
+            ->shouldBeCalled()
+            ->willReturn(new RawResponse($headers, $this->successfulMessageNodeResponse(), 200));
+
+        $response = $this->whatsapp_app_cloud_api->sendReaction(
+            $to,
+            $message_id
+        );
 
         $this->assertEquals(200, $response->httpStatusCode());
         $this->assertEquals(json_decode($this->successfulMessageNodeResponse(), true), $response->decodedBody());

@@ -12,7 +12,7 @@ $Columns = [
 $IndexColumn = 'id';
 $Table = db_prefix() . 'wtc_canned_reply';
 $where = [];
-if(staff_can('view_own','wtc_canned_reply')){
+if(staff_cant('view_own','wtc_canned_reply')){
     $where[] = "AND `added_from` = ".get_staff_user_id();
 }
 

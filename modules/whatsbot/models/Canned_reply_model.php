@@ -12,7 +12,7 @@ class Canned_reply_model extends App_Model
     public function add($posted_data)
     {
         $insert = $update = false;
-        $posted_data['added_from'] = get_staff_user_id();
+        $posted_data['added_from'] = $posted_data['added_from'] ?? get_staff_user_id();
         if (isset($posted_data['description'])) {
             $posted_data['description'] = strip_tags($posted_data['description']);
         }
@@ -35,11 +35,13 @@ class Canned_reply_model extends App_Model
 
     public function delete_reply($posted_data)
     {
-        $delete = $this->db->delete(db_prefix() . 'wtc_canned_reply', ['id' => $posted_data['id']]);
+        $this->db->delete(db_prefix() . 'wtc_canned_reply', ['id' => $posted_data['id']]);
+
+        $delete = ($this->db->affected_rows() > 0) ? true : false;
 
         $message = ($delete) ? _l('deleted', _l('reply')) : _l('something_went_wrong');
 
-        return ['type' => 'danger', 'message' => $message];
+        return ['type' => 'danger', 'message' => $message, 'status' => ($delete) ? true : false];
     }
 
     public function update_status($id, $status)

@@ -13,29 +13,33 @@ class Env_ver extends AdminController
         show_404();
     }
 
-    // Removendo a necessidade de validação do módulo e chave de compra
+    /**
+     * Modificado para remover a necessidade de ativação via chave de compra
+     * O método activate agora sempre retorna o módulo como validado, sem checagem de chave.
+     */
     public function activate()
     {
-        // Simula uma resposta positiva sem verificar a chave
+        // Código de ativação removido. O módulo será considerado sempre ativo.
         $res = [
             'status' => true,
-            'original_url' => $this->input->post('original_url'),
-            'message' => 'Module activated successfully'
+            'message' => 'Módulo ativado com sucesso.',
+            'original_url' => $this->input->post('original_url')
         ];
-        
         echo json_encode($res);
     }
 
-    // Removendo a necessidade de validação do módulo para upgrade do banco de dados
+    /**
+     * Modificado para remover a necessidade de ativação para upgrade de banco de dados
+     * O método upgrade_database agora sempre retorna o sucesso da operação, sem checagem de chave.
+     */
     public function upgrade_database()
     {
-        // Simula uma resposta positiva sem verificar a chave
+        // Código de validação removido. A atualização do banco de dados será sempre permitida.
         $res = [
             'status' => true,
-            'original_url' => $this->input->post('original_url'),
-            'message' => 'Database upgrade successful'
+            'message' => 'Banco de dados atualizado com sucesso.',
+            'original_url' => $this->input->post('original_url')
         ];
-
         echo json_encode($res);
     }
 }

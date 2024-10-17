@@ -18,6 +18,20 @@ class Whatsapp_webhook extends ClientsController
     public $is_first_time = false;
 
     /**
+     * Stores the pusher options.
+     *
+     * @var array
+     */
+    protected $pusher_options = [];
+
+    /**
+     * Hold Pusher instance.
+     *
+     * @var object
+     */
+    protected $pusher;
+
+    /**
      * Constructor for Whatsapp_webhook class.
      * Loads necessary models for processing webhooks.
      */
@@ -25,6 +39,23 @@ class Whatsapp_webhook extends ClientsController
     {
         parent::__construct();
         $this->load->model(['whatsbot_model', 'bots_model', 'interaction_model']);
+
+        if (!empty(get_option('pusher_app_key')) || !empty(get_option('pusher_app_secret')) || !empty(get_option('pusher_app_id'))) {
+            // store pusher data into pusher variable
+            $this->pusher_options['app_key'] = get_option('pusher_app_key');
+            $this->pusher_options['app_secret'] = get_option('pusher_app_secret');
+            $this->pusher_options['app_id'] = get_option('pusher_app_id');
+            if (!empty(get_option('pusher_cluster'))) {
+                $this->pusher_options['cluster'] = get_option('pusher_cluster');
+            }
+
+            $this->pusher = new Pusher\Pusher(
+                $this->pusher_options['app_key'],
+                $this->pusher_options['app_secret'],
+                $this->pusher_options['app_id'],
+                ['cluster' => $this->pusher_options['cluster'] ?? '']
+            );
+        }
     }
 
     public function index_old()
@@ -97,93 +128,104 @@ class Whatsapp_webhook extends ClientsController
         // file_put_contents(FCPATH . '/check_msg.json', json_encode($changed_data), \FILE_APPEND);
         if (!empty($changed_data['statuses'])) {
             $this->whatsbot_model->updateStatus($changed_data['statuses']);
+            $statuses = reset($changed_data['statuses']);
+            $status_id = $statuses['id'];
+            $wb_message = $this->interaction_model->get_message(['message_id' => $status_id]);
+            $wb_message = reset($wb_message);
+            if (!empty(get_option('pusher_app_key')) || !empty(get_option('pusher_app_secret')) || !empty(get_option('pusher_app_id'))) {
+                $this->pusher->trigger('interactions-channel', 'new-message-event', [
+                    'interaction' => $this->interaction_model->get_new_interaction_message($wb_message['interaction_id'], $wb_message['id'])
+                ]);
+            }
         }
 
         if (!empty($changed_data['messages'])) {
             $message = reset($changed_data['messages']);
             $trigger_msg = (!empty($message['interactive'])) ? $message['interactive']['button_reply']['id'] : (isset($message['button']['text']) ? $message['button']['text'] : $message['text']['body']);
-            $contact = reset($changed_data['contacts']);
-            $metadata = $changed_data['metadata'];
-            try {
-                $contact_number = $message['from'];
-                $contact_data = $this->whatsbot_model->getContactData($contact_number, $contact['profile']['name']);
+            if (!empty($trigger_msg)) {
+                $contact = reset($changed_data['contacts']);
+                $metadata = $changed_data['metadata'];
+                try {
+                    $contact_number = $message['from'];
+                    $contact_data = $this->whatsbot_model->getContactData($contact_number, $contact['profile']['name']);
 
-                $query_trigger_msg = $trigger_msg;
-                $reply_type = null;
-                if ($this->is_first_time) {
-                    $query_trigger_msg = "";
-                    $reply_type = 3;
-                }
-
-                // Fetch template and message bots based on interaction
-                $template_bots = $this->bots_model->getTemplateBotsbyRelType($contact_data->rel_type ?? '', $query_trigger_msg, $reply_type);
-                $message_bots = $this->bots_model->getMessageBotsbyRelType($contact_data->rel_type ?? '', $query_trigger_msg, $reply_type);
-                $get_flows = $this->bots_model->get_flows($contact_data->rel_type ?? '', $trigger_msg, true);
-
-                $add_messages = function ($item) {
-                    $item['header_message'] = $item['header_data_text'];
-                    $item['body_message'] = $item['body_data'];
-                    $item['footer_message'] = $item['footer_data'];
-                    return $item;
-                };
-
-                // Map template bots
-                $template_bots = array_map($add_messages, $template_bots);
-                $chatMessage = [];
-
-                // Iterate over template bots
-                foreach ($template_bots as $template) {
-                    $template['rel_id'] = $contact_data->id;
-                    if (!empty($contact_data->userid)) {
-                        $template['userid'] = $contact_data->userid;
+                    $query_trigger_msg = $trigger_msg;
+                    $reply_type = null;
+                    if ($this->is_first_time) {
+                        $query_trigger_msg = "";
+                        $reply_type = 3;
                     }
 
-                    // Send template on exact match, contains, or first time
-                    if ((1 == $template['bot_type'] && in_array(strtolower($trigger_msg), array_map("trim", array_map("strtolower", explode(',', $template['trigger']))))) || 2 == $template['bot_type'] || (3 == $template['bot_type'] && $this->is_first_time) || 4 == $template['bot_type']) {
-                        $response = $this->sendTemplate($contact_number, $template, 'template_bot', $metadata['phone_number_id']);
-                        $logBatch[] = $response['log_data'];
-                        if ($response['status']) {
-                            $interactionId = wbGetInteractionId($template, $template['rel_type'], $contact_data->id, $contact_data->name, $contact_number, $changed_data['metadata']['display_phone_number']);
-                            $chatMessage[] = $this->store_bot_messages($template, $interactionId, $contact_data, 'template_bot', $response);
+                    // Fetch template and message bots based on interaction
+                    $template_bots = $this->bots_model->getTemplateBotsbyRelType($contact_data->rel_type ?? '', $query_trigger_msg, $reply_type);
+                    $message_bots = $this->bots_model->getMessageBotsbyRelType($contact_data->rel_type ?? '', $query_trigger_msg, $reply_type);
+                    $get_flows = $this->bots_model->get_flows($contact_data->rel_type ?? '', $trigger_msg, true);
+
+                    $add_messages = function ($item) {
+                        $item['header_message'] = $item['header_data_text'];
+                        $item['body_message'] = $item['body_data'];
+                        $item['footer_message'] = $item['footer_data'];
+                        return $item;
+                    };
+
+                    // Map template bots
+                    $template_bots = array_map($add_messages, $template_bots);
+                    $chatMessage = [];
+
+                    // Iterate over template bots
+                    foreach ($template_bots as $template) {
+                        $template['rel_id'] = $contact_data->id;
+                        if (!empty($contact_data->userid)) {
+                            $template['userid'] = $contact_data->userid;
+                        }
+
+                        // Send template on exact match, contains, or first time
+                        if ((1 == $template['bot_type'] && in_array(strtolower($trigger_msg), array_map("trim", array_map("strtolower", explode(',', $template['trigger']))))) || 2 == $template['bot_type'] || (3 == $template['bot_type'] && $this->is_first_time) || 4 == $template['bot_type']) {
+                            $response = $this->sendTemplate($contact_number, $template, 'template_bot', $metadata['phone_number_id']);
+                            $logBatch[] = $response['log_data'];
+                            if ($response['status']) {
+                                $interactionId = wbGetInteractionId($template, $template['rel_type'], $contact_data->id, $contact_data->name, $contact_number, $changed_data['metadata']['display_phone_number']);
+                                $chatMessage[] = $this->store_bot_messages($template, $interactionId, $contact_data, 'template_bot', $response);
+                            }
                         }
                     }
-                }
 
-                // Iterate over message bots
-                foreach ($message_bots as $message) {
-                    $message['rel_id'] = $contact_data->id;
-                    if (!empty($contact_data->userid)) {
-                        $message['userid'] = $contact_data->userid;
-                    }
-                    if ((1 == $message['reply_type'] && in_array(strtolower($trigger_msg), array_map("trim", array_map("strtolower", explode(',', $message['trigger']))))) || 2 == $message['reply_type'] || (3 == $message['reply_type'] && $this->is_first_time) || 4 == $message['reply_type']) {
-                        $response = $this->sendMessage($contact_number, $message, $metadata['phone_number_id']);
-                        if ($response['status']) {
-                            $interactionId = wbGetInteractionId($message, $message['rel_type'], $contact_data->id, $contact_data->name, $contact_number, $changed_data['metadata']['display_phone_number']);
-                            $chatMessage[] = $this->store_bot_messages($message, $interactionId, $contact_data, '', $response);
+                    // Iterate over message bots
+                    foreach ($message_bots as $message) {
+                        $message['rel_id'] = $contact_data->id;
+                        if (!empty($contact_data->userid)) {
+                            $message['userid'] = $contact_data->userid;
+                        }
+                        if ((1 == $message['reply_type'] && in_array(strtolower($trigger_msg), array_map("trim", array_map("strtolower", explode(',', $message['trigger']))))) || 2 == $message['reply_type'] || (3 == $message['reply_type'] && $this->is_first_time) || 4 == $message['reply_type']) {
+                            $response = $this->sendMessage($contact_number, $message, $metadata['phone_number_id']);
+                            if ($response['status']) {
+                                $interactionId = wbGetInteractionId($message, $message['rel_type'], $contact_data->id, $contact_data->name, $contact_number, $changed_data['metadata']['display_phone_number']);
+                                $chatMessage[] = $this->store_bot_messages($message, $interactionId, $contact_data, '', $response);
+                            }
                         }
                     }
-                }
 
-                // Iterate over flow bots 
-                foreach ($get_flows as $message) {
-                    $message['rel_id'] = $contact_data->id;
-                    if (!empty($contact_data->userid)) {
-                        $message['userid'] = $contact_data->userid;
-                    }
-                    if ((1 == $message['reply_type'] && in_array(strtolower($trigger_msg), array_map("trim", array_map("strtolower", explode(',', $message['trigger']))))) || (2 == $message['reply_type'] && is_numeric(stripos($trigger_msg, $message['trigger']))) || (3 == $message['reply_type'] && $this->is_first_time) || 4 == $message['reply_type']) {
-                        $response = $this->sendMessage($contact_number, $message, $metadata['phone_number_id'], "flow");
-                        if ($response['status']) {
-                            $interactionId = wbGetInteractionId($message, $message['rel_type'], $contact_data->id, $contact_data->name, $contact_number, $changed_data['metadata']['display_phone_number']);
-                            $chatMessage[] = $this->store_bot_messages($message, $interactionId, $contact_data, 'flow', $response);
+                    // Iterate over flow bots 
+                    foreach ($get_flows as $message) {
+                        $message['rel_id'] = $contact_data->id;
+                        if (!empty($contact_data->userid)) {
+                            $message['userid'] = $contact_data->userid;
+                        }
+                        if ((1 == $message['reply_type'] && in_array(strtolower($trigger_msg), array_map("trim", array_map("strtolower", explode(',', $message['trigger']))))) || (2 == $message['reply_type'] && is_numeric(stripos($trigger_msg, $message['trigger']))) || (3 == $message['reply_type'] && $this->is_first_time) || 4 == $message['reply_type']) {
+                            $response = $this->sendMessage($contact_number, $message, $metadata['phone_number_id'], "flow");
+                            if ($response['status']) {
+                                $interactionId = wbGetInteractionId($message, $message['rel_type'], $contact_data->id, $contact_data->name, $contact_number, $changed_data['metadata']['display_phone_number']);
+                                $chatMessage[] = $this->store_bot_messages($message, $interactionId, $contact_data, 'flow', $response);
+                            }
                         }
                     }
+                    // Add chat messages to database
+                    $this->whatsbot_model->addChatMessage($chatMessage);
+                    // Add template bot logs
+                    $this->whatsbot_model->addWhatsbotLog($logBatch ?? []);
+                } catch (\Throwable $th) {
+                    file_put_contents(FCPATH . '/errors.json', json_encode([$th->getMessage()]));
                 }
-                // Add chat messages to database
-                $this->whatsbot_model->addChatMessage($chatMessage);
-                // Add template bot logs
-                $this->whatsbot_model->addWhatsbotLog($logBatch ?? []);
-            } catch (\Throwable $th) {
-                file_put_contents(FCPATH . '/errors.json', json_encode([$th->getMessage()]));
             }
         }
     }
@@ -271,7 +313,7 @@ class Whatsapp_webhook extends ClientsController
             $this->interaction_model->map_interaction($interaction);
 
             // Insert interaction message data into the 'whatsapp_official_interaction_messages' table
-            $this->interaction_model->insert_interaction_message([
+            $new_message_id = $this->interaction_model->insert_interaction_message([
                 'interaction_id' => $interaction_id,
                 'sender_id'      => $from,
                 'message_id'     => $message_id,
@@ -284,6 +326,12 @@ class Whatsapp_webhook extends ClientsController
                 'ref_message_id' => $ref_message_id,
             ]);
 
+            if (!empty(get_option('pusher_app_key')) || !empty(get_option('pusher_app_secret')) || !empty(get_option('pusher_app_id'))) {
+                $this->pusher->trigger('interactions-channel', 'new-message-event', [
+                    'interaction' => $this->interaction_model->get_new_interaction_message($interaction_id, $new_message_id)
+                ]);
+            }
+
             // Respond with success message
             http_response_code(200);
         } elseif (isset($value['statuses'])) {
@@ -291,6 +339,15 @@ class Whatsapp_webhook extends ClientsController
             $id          = $statusEntry['id'];
             $status      = $statusEntry['status'];
             $this->interaction_model->update_message_status($id, $status);
+
+            $status_id = $statusEntry['id'];
+            $wb_message = $this->interaction_model->get_message(['message_id' => $status_id]);
+            $wb_message = reset($wb_message);
+            if (!empty(get_option('pusher_app_key')) || !empty(get_option('pusher_app_secret')) || !empty(get_option('pusher_app_id'))) {
+                $this->pusher->trigger('interactions-channel', 'new-message-event', [
+                    'interaction' => $this->interaction_model->get_new_interaction_message($wb_message['interaction_id'], $wb_message['id'])
+                ]);
+            }
         } else {
             // Invalid payload structure
             $this->output
@@ -312,16 +369,18 @@ class Whatsapp_webhook extends ClientsController
         $existing_interaction = $this->db->where('id', $id)->get(db_prefix() . 'wtc_interactions')->result_array();
         $to                   = $this->input->post('to', true) ?? '';
         $message              = strip_tags($this->input->post('message', true) ?? '');
-        if ($type == 'contacts') {
-            $user_id = $this->clients_model->get_contact($type_id)->userid;
+        if ($type == 'contacts' || $type == 'leads') {
+            if ($type == 'contacts') {
+                $user_id = $this->clients_model->get_contact($type_id)->userid;
+            }
+            $message_data         = wbParseMessageText([
+                'rel_type' => $type,
+                'rel_id' => $type_id,
+                'reply_text' => $message,
+                'userid' => $user_id ?? null,
+            ]);
         }
-        $message_data         = wbParseMessageText([
-            'rel_type' => $type,
-            'rel_id' => $type_id,
-            'reply_text' => $message,
-            'userid' => $user_id ?? null,
-        ]);
-        $message = $message_data['reply_text'];
+        $message = $message_data['reply_text'] ?? $message;
         $ref_message_id       = $this->input->post('ref_message_id', true);
         $imageAttachment      = $_FILES['image'] ?? null;
         $videoAttachment      = $_FILES['video'] ?? null;
@@ -437,7 +496,7 @@ class Whatsapp_webhook extends ClientsController
         ]);
 
         foreach ($message_data as $data) {
-            $this->interaction_model->insert_interaction_message([
+            $new_message_id = $this->interaction_model->insert_interaction_message([
                 'interaction_id' => $interaction_id,
                 'sender_id'      => $existing_interaction[0]['wa_no'], // Accessing object property directly
                 'message'        => $message,
@@ -449,7 +508,13 @@ class Whatsapp_webhook extends ClientsController
                 'time_sent'      => date('Y-m-d H:i:s'),
                 'ref_message_id' => $ref_message_id ?? '',
             ]);
+            if (!empty(get_option('pusher_app_key')) || !empty(get_option('pusher_app_secret')) || !empty(get_option('pusher_app_id'))) {
+                $this->pusher->trigger('interactions-channel', 'new-message-event', [
+                    'interaction' => $this->interaction_model->get_new_interaction_message($interaction_id, $new_message_id)
+                ]);
+            }
         }
+
 
         // Return success response
         echo json_encode(['success' => true]);

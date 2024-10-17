@@ -79,7 +79,7 @@
                                     </h4>
                                     <div class="clearfix"></div>
                                     <hr class="hr-panel-separator">
-                                    <button type="submit" class="btn btn-danger mtop15" autocomplete="off" data-loading-text="<?php echo _l('wait_text'); ?>"><?php echo _l('send_campaign'); ?></button>
+                                    <button type="submit" class="btn btn-danger mtop15" id="send_bulk_campaign"><?php echo _l('send_campaign'); ?></button>
                                 </div>
                             </div>
                         </div>
@@ -190,6 +190,7 @@
     $(document).on('submit', '#bulk_campaign_form', function(event) {
         event.preventDefault();
         let formData = new FormData(this);
+        $('#send_bulk_campaign').attr('disabled', true);
         $('#loading_Modal').modal('show');
         $.ajax({
             url: `${admin_url}whatsbot/bulk_campaigns/send`,
@@ -200,6 +201,7 @@
             processData: false,
         }).done(function(res) {
             $('#loading_Modal').modal('hide');
+            $('#send_bulk_campaign').attr('disabled', false);
             alert_float(res.type, res.message);
             setTimeout(function() {
                 window.location.reload();

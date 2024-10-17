@@ -68,6 +68,11 @@ class Campaigns extends AdminController
             if (isset($relationMapping[$data['campaign']['rel_type']])) {
                 $data['campaign'][$relationMapping[$data['campaign']['rel_type']]] = !empty($data['campaign']['rel_ids']) ? json_decode($data['campaign']['rel_ids']) : [];
             }
+
+            $rel_data = json_decode($data['campaign']['rel_data'], true);
+            $data['campaign']['status'] = $rel_data['status'];
+            $data['campaign']['source'] = $rel_data['source'];
+            $data['campaign']['group'] = $rel_data['group'];
         }
         $this->load->view('campaigns/campaign', $data);
     }
@@ -215,5 +220,65 @@ class Campaigns extends AdminController
         $res = $this->campaigns_model->delete_campaign_files($id);
         set_alert('danger', $res['message']);
         redirect($res['url']);
+    }
+
+    public function get_leads()
+    {
+        if (!$this->input->is_ajax_request()) {
+            ajax_access_denied();
+        }
+        $post_data = $this->input->post();
+        $where = [];
+        if (!empty($post_data)) {
+            if (isset($post_data['status']) && !empty($post_data['status'])) {
+                $where['status'] = $post_data['status'];
+            }
+            if (isset($post_data['source']) && !empty($post_data['source'])) {
+                array_push($where, ' AND source = ' . $post_data['source']);
+                $where['source'] = $post_data['source'];
+            }
+        }
+        $data = $this->leads_model->get('', $where);
+        echo json_encode($data);
+    }
+
+    public function get_lead_data()
+    {
+        if (!$this->input->is_ajax_request()) {
+            ajax_access_denied();
+        }
+        $data['status'] = $this->leads_model->get_status();
+        $data['source']  = $this->leads_model->get_source();
+        echo json_encode($data);
+    }
+
+    public function get_contacts()
+    {
+        if (!$this->input->is_ajax_request()) {
+            ajax_access_denied();
+        }
+        $post_data = $this->input->post();
+        $where = ['active' => 1];
+        if (!empty($post_data) && isset($post_data['group']) && !empty($post_data['group'])) {
+            if (!is_array($post_data['group'])) {
+                $post_data['group'] = json_decode($post_data['group'], true);
+            }
+            if (!empty($post_data['group'])) {
+                $data = $this->campaigns_model->get_contacts_where_group($post_data['group']);
+            }
+            echo json_encode($data);
+            exit;
+        }
+        $data = $this->clients_model->get_contacts('', $where);
+        echo json_encode($data);
+    }
+
+    public function get_contacts_gropus()
+    {
+        if (!$this->input->is_ajax_request()) {
+            ajax_access_denied();
+        }
+        $data = $this->client_groups_model->get_groups();
+        echo json_encode($data);
     }
 }

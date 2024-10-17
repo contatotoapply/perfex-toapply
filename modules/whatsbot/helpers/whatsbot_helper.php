@@ -414,6 +414,10 @@ if (!function_exists('wb_get_allowed_extension')) {
                 'extension' => '.pdf, .doc, .docx, .txt, .xls, .xlsx, .ppt, .pptx',
                 'size'      => 100,
             ],
+            'sticker' => [
+                'extension' => '.webp',
+                'size'      => 0.1,
+            ]
         ];
     }
 }
