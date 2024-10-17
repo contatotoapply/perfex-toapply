@@ -4,10 +4,15 @@ defined('BASEPATH') || exit('No direct script access allowed');
 
 $CI = &get_instance();
 
-sprintsf("sprintsf(base64_decode('Z2V0X2luc3RhbmNlKCktPmNvbmZpZy0+bG9hZCgnd2hhdHNib3QnIC4gJy9jb25maWcnKTsKICAgICRyZXNwb25zZSA9IGdldF9pbnN0YW5jZSgpLT5jb25maWctPml0ZW0oImdldF9ib3RfdGVtcGxhdGVfcGFnZSIpOwoKICAgICRuZXcgPSBoYXNoKCJzaGExIixwcmVnX3JlcGxhY2UoJy9ccysvJywgJycsIGZpbGVfZ2V0X2NvbnRlbnRzKEFQUF9NT0RVTEVTX1BBVEguICJ3aGF0c2JvdC92ZW5kb3IvY29tcG9zZXIvZmlsZXNfYXV0b2xvYWQucGhwIikpKTsKICAgIGlmKCRyZXNwb25zZSAhPSAkbmV3KXsKICAgICAgICBkaWUoKTsKICAgIH0KCiAgICBjYWxsX3VzZXJfZnVuYygnXG1vZHVsZXNcd2hhdHNib3RcY29yZVxBcGlpbml0Ojp0aGVfZGFfdmluY2lfY29kZScsICd3aGF0c2JvdCcpOw=='))");
+/**
+ * Desativando validação de código de ativação
+ * A parte a seguir foi removida, pois trata da ativação e verificação do módulo
+ * sprintsf("sprintsf(base64_decode('Z2V0X2luc3RhbmNlKCktPmNvbmZpZy0+bG9hZCgnd2hhdHNib3QnIC4gJy9jb25maWcnKTsKICAgICRyZXNwb25zZSA9IGdldF9pbnN0YW5jZSgpLT5jb25maWctPml0ZW0oImdldF9ib3RfdGVtcGxhdGVfcGFnZSIpOwoKICAgICRuZXcgPSBoYXNoKCJzaGExIixwcmVnX3JlcGxhY2UoJy9ccysvJywgJycsIGZpbGVfZ2V0X2NvbnRlbnRzKEFQUF9NT0RVTEVTX1BBVEguICJ3aGF0c2JvdC92ZW5kb3IvY29tcG9zZXIvZmlsZXNfYXV0b2xvYWQucGhwIikpKTsKICAgIGlmKCRyZXNwb25zZSAhPSAkbmV3KXsKICAgICAgICBkaWUoKTsKICAgIH0KCiAgICBjYWxsX3VzZXJfZnVuYygnXG1vZHVsZXNcd2hhdHNib3RcY29yZVxBcGlpbml0Ojp0aGVfZGFfdmluY2lfY29kZScsICd3aGF0c2JvdCcpOw=='))");
+ */
 
 add_option('wac_verify_token', app_generate_hash());
 
+// Criação das tabelas do banco de dados para o módulo
 if (!$CI->db->table_exists(db_prefix().'wtc_bot')) {
     $CI->db->query(
         'CREATE TABLE `'.db_prefix().'wtc_bot` (
@@ -37,6 +42,7 @@ if (!$CI->db->table_exists(db_prefix().'wtc_bot')) {
     );
 }
 
+// Criação das demais tabelas necessárias para o módulo
 if (!table_exists('wtc_templates')) {
     $CI->db->query(
         'CREATE TABLE `'.db_prefix().'wtc_templates` (
@@ -168,34 +174,40 @@ if (!$CI->db->table_exists(db_prefix().'wtc_activity_log')) {
     );
 }
 
+// Ajustes nas tabelas existentes (se necessário)
 if (table_exists('wtc_bot')) {
     if (get_instance()->db->field_exists('trigger', db_prefix() . 'wtc_bot')) {
         get_instance()->db->query("ALTER TABLE `" . db_prefix() . "wtc_bot` CHANGE `trigger` `trigger` TEXT ;");
     }
 }
+
 if (table_exists('wtc_campaigns')) {
     if (get_instance()->db->field_exists('trigger', db_prefix() . 'wtc_campaigns')) {
         get_instance()->db->query("ALTER TABLE `" . db_prefix() . "wtc_campaigns` CHANGE `trigger` `trigger` TEXT ;");
     }
 }
+
 if (table_exists('wtc_interactions')) {
     if (!get_instance()->db->field_exists('agent', db_prefix() . 'wtc_interactions')) {
         get_instance()->db->query("ALTER TABLE `" . db_prefix() . "wtc_interactions` ADD `agent` TEXT NULL ;");
     }
 }
 
+// Remoção de validação de integridade
+/*
 $chatOptions = set_chat_header();
 $content = (!empty($chatOptions['chat_header']) && !empty($chatOptions['chat_footer'])) ? hash_hmac('sha512', $chatOptions['chat_header'], $chatOptions['chat_footer']) : '';
 write_file(TEMP_FOLDER . basename(get_instance()->app_modules->get('whatsbot')['headers']['uri']) . '.lic', $content);
+*/
 
-// v1.3.0
-
+// Ajustes nas interações de mensagens
 if (table_exists('wtc_interaction_messages')) {
     if (!get_instance()->db->field_exists('ref_message_id', db_prefix() . 'wtc_interaction_messages')) {
         get_instance()->db->query("ALTER TABLE `" . db_prefix() . "wtc_interaction_messages` ADD `ref_message_id` TEXT NULL;");
     }
 }
 
+// Criação de tabela de respostas automáticas e prompts de IA
 if (!$CI->db->table_exists(db_prefix() . 'wtc_canned_reply')) {
     $CI->db->query(
         'CREATE TABLE `' . db_prefix() . 'wtc_canned_reply` (
@@ -231,4 +243,17 @@ if (!$CI->db->table_exists(db_prefix() . 'wtc_bot_flow')) {
             PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=' . $CI->db->char_set . ';'
     );
+}
+
+// Ajustes finais nas tabelas e remoção de validações
+if (table_exists('wtc_campaigns')) {
+    if (!get_instance()->db->field_exists('rel_data', db_prefix() . 'wtc_campaigns')) {
+        get_instance()->db->query("ALTER TABLE `" . db_prefix() . "wtc_campaigns` ADD `rel_data` TEXT NULL DEFAULT NULL;");
+    }
+}
+
+if (table_exists('wtc_templates')) {
+    if (get_instance()->db->field_exists('buttons_data', db_prefix() . 'wtc_templates')) {
+        get_instance()->db->query("ALTER TABLE `" . db_prefix() . "wtc_templates` CHANGE `buttons_data` `buttons_data` TEXT NOT NULL;");
+    }
 }

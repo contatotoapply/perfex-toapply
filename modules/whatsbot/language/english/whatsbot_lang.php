@@ -350,6 +350,18 @@ $lang['bot_flow'] = 'Bot Flow';
 $lang['create_new_flow'] = 'Create New Flow';
 $lang['flow_name'] = 'Flow Name';
 $lang['flow'] = 'Flow';
-$lang['bot_flow_builder'] = 'Bot Flow Builder <span class="badge badge-warning">Beta</span>';
+$lang['bot_flow_builder'] = 'Bot Flow Builder';
 $lang['you_can_not_upload_file_type'] = 'You can\'t upload <b> %s </b> type of file';
 $lang['whatsbot_bot_flow'] = 'Whatsbot Bot Flow';
+
+// v1.3.2
+$lang['auto_clear_chat_history'] = 'Auto Clear Chat History';
+$lang['enable_auto_clear_chat_history'] = 'Enable Auto Clear Chat History';
+$lang['auto_clear_time'] = 'Auto Clear History Time';
+$lang['clear_chat_history_note'] = '<strong>Note: </strong> If you enable the auto-clear chat history feature, it will automatically clear the chat history based on the number of days you specify, whenever the cron job runs.';
+$lang['source'] = 'Source';
+$lang['groups'] = 'Groups';
+
+//  v1.3.3
+
+$lang['click_user_to_chat'] = 'Click User To Chat';

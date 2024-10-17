@@ -181,6 +181,9 @@ trait Whatsapp
      */
     public function retrieveUrl($media_id, $accessToken)
     {
+        if (!defined(WHATSBOT_MODULE_UPLOAD_FOLDER)) {
+            define('WHATSBOT_MODULE_UPLOAD_FOLDER', 'uploads/whatsbot');
+        }
         $uploadFolder = WHATSBOT_MODULE_UPLOAD_FOLDER;
 
         $client   = new \GuzzleHttp\Client();
@@ -230,6 +233,9 @@ trait Whatsapp
      */
     public function handle_attachment_upload($attachment)
     {
+        if (!defined(WHATSBOT_MODULE_UPLOAD_FOLDER)) {
+            define('WHATSBOT_MODULE_UPLOAD_FOLDER', 'uploads/whatsbot');
+        }
         $uploadFolder = WHATSBOT_MODULE_UPLOAD_FOLDER;
 
         $contentType  = $attachment['type'];
@@ -446,9 +452,9 @@ trait Whatsapp
         }
 
         return [
-            'status' => $status, 
-            'data' => $data ?? [], 
-            'responseCode' => $responseCode, 
+            'status' => $status,
+            'data' => $data ?? [],
+            'responseCode' => $responseCode,
             'message' => $message->error->message ?? ''
         ];
     }

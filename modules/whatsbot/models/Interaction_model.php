@@ -163,86 +163,89 @@ class Interaction_model extends App_Model
      */
     public function map_interaction($interaction)
     {
-        if (null === $interaction['type'] || null === $interaction['type_id'] || empty($interaction['type_id'])) {
-            $interaction_id = $interaction['id'];
-            $receiver_id    = $interaction['receiver_id'];
-            $customer       = $this->db->where('phonenumber', $receiver_id)->get(db_prefix() . 'clients')->row();
-            $contact        = $this->db->where('phonenumber', $receiver_id)->get(db_prefix() . 'contacts')->row();
-            $lead           = $this->db->where('phonenumber', $receiver_id)->get(db_prefix() . 'leads')->row();
-            $staff          = $this->db->where('phonenumber', $receiver_id)->get(db_prefix() . 'staff')->row();
+        if (!empty($interaction)) {
 
-            $entity = null;
-            $type   = null;
+            if (null === $interaction['type'] || null === $interaction['type_id'] || empty($interaction['type_id'])) {
+                $interaction_id = $interaction['id'];
+                $receiver_id    = $interaction['receiver_id'];
+                $customer       = $this->db->where('phonenumber', $receiver_id)->get(db_prefix() . 'clients')->row();
+                $contact        = $this->db->where('phonenumber', $receiver_id)->get(db_prefix() . 'contacts')->row();
+                $lead           = $this->db->where('phonenumber', $receiver_id)->get(db_prefix() . 'leads')->row();
+                $staff          = $this->db->where('phonenumber', $receiver_id)->get(db_prefix() . 'staff')->row();
 
-            if ($customer) {
-                $entity = $customer->userid;
-                $type   = 'customer';
-            } elseif ($contact) {
-                $entity = $contact->id;
-                $type   = 'contacts';
-            } elseif ($staff) {
-                $entity = $staff->staffid;
-                $type   = 'staff';
-            } else {
-                $type = 'leads';
-                $entity = (!empty($lead)) ? $lead->id : hooks()->apply_filters('ctl_auto_lead_creation', $receiver_id, $interaction['name']);
+                $entity = null;
+                $type   = null;
+
+                if ($customer) {
+                    $entity = $customer->userid;
+                    $type   = 'customer';
+                } elseif ($contact) {
+                    $entity = $contact->id;
+                    $type   = 'contacts';
+                } elseif ($staff) {
+                    $entity = $staff->staffid;
+                    $type   = 'staff';
+                } else {
+                    $type = 'leads';
+                    $entity = (!empty($lead)) ? $lead->id : hooks()->apply_filters('ctl_auto_lead_creation', $receiver_id, $interaction['name']);
+                }
+
+                $data = [
+                    'type'        => $type,
+                    'type_id'     => $entity,
+                    'wa_no'       => $interaction['wa_no'] ?? get_option('wac_default_phone_number'),
+                    'receiver_id' => $receiver_id,
+                ];
+
+                $existing_interaction = $this->db->where('id', $interaction_id)->get(db_prefix() . 'wtc_interactions')->row();
+
+                if ($existing_interaction) {
+                    $this->db->where('id', $interaction_id)->update(db_prefix() . 'wtc_interactions', $data);
+                } else {
+                    $data['id'] = $interaction_id;
+                    $this->db->insert(db_prefix() . 'wtc_interactions', $data);
+                }
             }
 
-            $data = [
-                'type'        => $type,
-                'type_id'     => $entity,
-                'wa_no'       => $interaction['wa_no'] ?? get_option('wac_default_phone_number'),
-                'receiver_id' => $receiver_id,
-            ];
+            if (null === $interaction['wa_no'] || null === $interaction['wa_no_id']) {
+                $interaction_id = $interaction['id'];
 
-            $existing_interaction = $this->db->where('id', $interaction_id)->get(db_prefix() . 'wtc_interactions')->row();
+                // Use null coalescing operator to provide default values if 'wa_no' or 'wa_no_id' is null
+                $wa_no    = $interaction['wa_no'] ?? get_option('wac_default_phone_number');
+                $wa_no_id = $interaction['wa_no_id'] ?? get_option('wac_phone_number_id');
 
-            if ($existing_interaction) {
-                $this->db->where('id', $interaction_id)->update(db_prefix() . 'wtc_interactions', $data);
-            } else {
-                $data['id'] = $interaction_id;
-                $this->db->insert(db_prefix() . 'wtc_interactions', $data);
+                // Prepare data for update
+                $data = [
+                    'wa_no'    => $wa_no,
+                    'wa_no_id' => $wa_no_id,
+                ];
+
+                // Check if the interaction exists
+                $existing_interaction = $this->db->where('id', $interaction_id)->get(db_prefix() . 'wtc_interactions')->row();
+
+                if ($existing_interaction) {
+                    // Update the existing interaction
+                    $this->db->where('id', $interaction_id)->update(db_prefix() . 'wtc_interactions', $data);
+                }
             }
-        }
 
-        if (null === $interaction['wa_no'] || null === $interaction['wa_no_id']) {
-            $interaction_id = $interaction['id'];
+            $agent_data =  (is_string($interaction['agent'])) ? json_decode($interaction['agent']) : $interaction['agent'];
 
-            // Use null coalescing operator to provide default values if 'wa_no' or 'wa_no_id' is null
-            $wa_no    = $interaction['wa_no'] ?? get_option('wac_default_phone_number');
-            $wa_no_id = $interaction['wa_no_id'] ?? get_option('wac_phone_number_id');
-
-            // Prepare data for update
+            $agent_id = $agent_data->agent_id ?? 0;
             $data = [
-                'wa_no'    => $wa_no,
-                'wa_no_id' => $wa_no_id,
-            ];
-
-            // Check if the interaction exists
-            $existing_interaction = $this->db->where('id', $interaction_id)->get(db_prefix() . 'wtc_interactions')->row();
-
-            if ($existing_interaction) {
-                // Update the existing interaction
-                $this->db->where('id', $interaction_id)->update(db_prefix() . 'wtc_interactions', $data);
-            }
-        }
-
-        $agent_data =  (is_string($interaction['agent'])) ? json_decode($interaction['agent']) : $interaction['agent'];
-
-        $agent_id = $agent_data->agent_id ?? 0;
-        $data = [
-            'assign_id' => 0,
-            'agent_id'  => $agent_id
-        ];
-
-        if ($interaction['type'] == 'leads') {
-            $asign_id = $this->leads_model->get($interaction['type_id'])->assigned ?? 0;
-            $data = [
-                'assign_id' => $asign_id,
+                'assign_id' => 0,
                 'agent_id'  => $agent_id
             ];
+
+            if ($interaction['type'] == 'leads') {
+                $asign_id = $this->leads_model->get($interaction['type_id'])->assigned ?? 0;
+                $data = [
+                    'assign_id' => $asign_id,
+                    'agent_id'  => $agent_id
+                ];
+            }
+            $this->db->update(db_prefix() . 'wtc_interactions', ['agent' => json_encode($data)], ['id' => $interaction['id']]);
         }
-        $this->db->update(db_prefix() . 'wtc_interactions', ['agent' => json_encode($data)], ['id' => $interaction['id']]);
     }
 
     public function chat_mark_as_read($id)
@@ -257,7 +260,7 @@ class Interaction_model extends App_Model
 
     public function add_assign_staff($post_data)
     {
-        $staff_id = $post_data['staff_id'];
+        $staff_id = $post_data['staff_id'] ?? '';
         $interaction_id = $post_data['interaction_id'];
         $interaction = $this->get_interaction($interaction_id);
         $asign_id = 0;
@@ -268,7 +271,23 @@ class Interaction_model extends App_Model
             'assign_id' => $asign_id,
             'agent_id'  => $staff_id
         ];
-        return $this->db->update(db_prefix() . 'wtc_interactions', ['agent' => json_encode($data)], ['id' => $interaction_id]);
+        $update = $this->db->update(db_prefix() . 'wtc_interactions', ['agent' => json_encode($data)], ['id' => $interaction_id]);
+        $interaction = $this->get_interaction($interaction_id);
+        if ($update) {
+            $data = [];
+            $interaction['agent'] = (is_string($interaction['agent'])) ? json_decode($interaction['agent']) : $interaction['agent'] ?? '';
+            if (!empty($interaction['agent']->agent_id) && is_array($interaction['agent']->agent_id)) {
+                $agent_ids = $interaction['agent']->agent_id;
+                $agent_name = implode(',', array_map('get_staff_full_name', $agent_ids));
+            }
+            $data['agent_icon'] = $this->load->view('interaction_staff', $interaction, true);
+            $data['agent_name'] = [
+                'agent_name' => $agent_name ?? '',
+                'assign_name' => !empty($interaction['agent']->assign_id) ? get_staff_full_name($interaction['agent']->assign_id) : '',
+            ];
+            return $data;
+        }
+        return false;
     }
 
     public function remove_staff($post_data)
@@ -285,5 +304,62 @@ class Interaction_model extends App_Model
             'agent_id'  => $agent_ids
         ];
         return $this->db->update(db_prefix() . 'wtc_interactions', ['agent' => json_encode($data)], ['id' => $interaction_id]);
+    }
+
+    /**
+     * Get only new interaction messages from the database.
+     *
+     * @return array Array of interaction messages
+     */
+    public function get_new_interaction_message($interaction_id, $message_id)
+    {
+        if (!empty($interaction_id)) {
+            // Fetch interactions ordered by time_sent in descending order
+            $interaction = $this->db->where('id', $interaction_id)->get(db_prefix() . 'wtc_interactions')->row_array();
+
+            // Fetch messages for interaction
+            $interaction['agent'] = (is_string($interaction['agent'])) ? json_decode($interaction['agent']) : $interaction['agent'] ?? '';
+            if (!empty($interaction['agent']->agent_id) && is_array($interaction['agent']->agent_id)) {
+                $agent_ids = $interaction['agent']->agent_id;
+                $agent_name = implode(',', array_map('get_staff_full_name', $agent_ids));
+            }
+
+            $interaction['agent_icon'] = $this->load->view('interaction_staff', $interaction, true);
+
+            $interaction['agent_name'] = [
+                'agent_name' => $agent_name ?? '',
+                'assign_name' => !empty($interaction['agent']->assign_id) ? get_staff_full_name($interaction['agent']->assign_id) : '',
+            ];
+            $interaction_id = $interaction['id'];
+            $messages       = $this->db->get_where(db_prefix() . 'wtc_interaction_messages', ['id' => $message_id])->row_array();
+            $this->map_interaction($interaction);
+            $interaction['messages'] = $messages;
+
+            // Fetch staff name for each message in the interaction
+            if (!empty($interaction['staff_id'])) {
+                $interaction['staff_name'] = get_staff_full_name($interaction['staff_id']);
+            } else {
+                $interaction['staff_name'] = null;
+            }
+
+            // Check if URL is already a base name
+            if ($interaction['messages']['url'] && false === strpos($interaction['messages']['url'], '/')) {
+                // If URL doesn't contain "/", consider it as a file name
+                // Assuming base URL is available
+                $interaction['asset_url'] = WHATSBOT_MODULE_UPLOAD_URL . $interaction['messages']['url'];
+                $interaction['messages']['asset_url'] = WHATSBOT_MODULE_UPLOAD_URL . $interaction['messages']['url'];
+            } else {
+                // Otherwise, use the URL directly
+                $interaction['asset_url'] = $interaction['messages']['url'] ?? null;
+                $interaction['messages']['asset_url'] = $interaction['messages']['url'] ?? null;
+            }
+            return $interaction;
+        }
+        return [];
+    }
+
+    public function get_message($where = [])
+    {
+        return $this->db->get_where(db_prefix() . 'wtc_interaction_messages', $where)->result_array();
     }
 }

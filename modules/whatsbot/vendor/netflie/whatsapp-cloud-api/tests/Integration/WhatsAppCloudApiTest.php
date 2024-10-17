@@ -10,6 +10,9 @@ use Netflie\WhatsAppCloudApi\Message\Contact\PhoneType;
 use Netflie\WhatsAppCloudApi\Message\CtaUrl\TitleHeader;
 use Netflie\WhatsAppCloudApi\Message\Media\LinkID;
 use Netflie\WhatsAppCloudApi\Message\Media\MediaObjectID;
+use Netflie\WhatsAppCloudApi\Message\MultiProduct\Action as MultiProductAction;
+use Netflie\WhatsAppCloudApi\Message\MultiProduct\Row as MultiProductRow;
+use Netflie\WhatsAppCloudApi\Message\MultiProduct\Section as MultiProductSection;
 use Netflie\WhatsAppCloudApi\Message\OptionsList\Action;
 use Netflie\WhatsAppCloudApi\Message\OptionsList\Row;
 use Netflie\WhatsAppCloudApi\Message\OptionsList\Section;
@@ -209,6 +212,18 @@ final class WhatsAppCloudApiTest extends TestCase
         $this->assertEquals(false, $response->isError());
     }
 
+    public function test_send_location_request()
+    {
+        $body = 'Let\'s start with your pickup. You can either manually *enter an address* or *share your current location*.';
+        $response = $this->whatsapp_app_cloud_api->sendLocationRequest(
+            WhatsAppCloudApiTestConfiguration::$to_phone_number_id,
+            $body
+        );
+
+        $this->assertEquals(200, $response->httpStatusCode());
+        $this->assertEquals(false, $response->isError());
+    }
+
     public function test_send_contact()
     {
         $contact_name = new ContactName('Adams', 'Smith');
@@ -278,6 +293,60 @@ final class WhatsAppCloudApiTest extends TestCase
         $this->assertEquals(false, $response->isError());
     }
 
+    public function test_send_catalog_message()
+    {
+        $body = 'Hello! Thanks for your interest. Ordering is easy. Just visit our catalog and add items you\'d like to purchase.';
+        $footer = 'Best grocery deals on WhatsApp!';
+        $response = $this->whatsapp_app_cloud_api->sendCatalog(
+            WhatsAppCloudApiTestConfiguration::$to_phone_number_id,
+            $body,
+            $footer,
+        );
+
+        $this->assertEquals(200, $response->httpStatusCode());
+        $this->assertEquals(false, $response->isError());
+    }
+
+    public function test_send_multi_product()
+    {
+        $this->markTestIncomplete(
+            'This test should send a real catalog ID and product SKU ID.'
+        );
+
+        $rows_section_1 = [
+            new MultiProductRow('<product-sku-id>'),
+            // can add more
+        ];
+
+        $rows_section_2 = [
+            new MultiProductRow('<product-sku-id>'),
+            // can add more
+        ];
+
+        $sections = [
+            new MultiProductSection('Section 1', $rows_section_1),
+            new MultiProductSection('Section 2', $rows_section_2),
+        ];
+
+        $action = new MultiProductAction($sections);
+        $catalog_id = '<catalog-id>';
+        $header = 'Grocery Collections';
+        $body = 'Hello! Thanks for your interest. Here\'s what we can offer you under our grocery collection. Thank you for shopping with us.';
+        $footer = 'Subject to T&C';
+
+        $response = $this->whatsapp_app_cloud_api->sendMultiProduct(
+            WhatsAppCloudApiTestConfiguration::$to_phone_number_id,
+            $catalog_id,
+            $action,
+            $header,
+            $body,
+            $footer // optional
+        );
+
+        $this->assertEquals(200, $response->httpStatusCode());
+        $this->assertEquals(false, $response->isError());
+    }
+
     public function test_send_reply_buttons()
     {
         $buttonRows = [
@@ -295,6 +364,53 @@ final class WhatsAppCloudApiTest extends TestCase
             $buttonAction,
             $header,
             $footer
+        );
+
+        $this->assertEquals(200, $response->httpStatusCode());
+        $this->assertEquals(false, $response->isError());
+    }
+
+    public function test_send_reaction_message()
+    {
+        $textMessage = $this->whatsapp_app_cloud_api->sendTextMessage(
+            WhatsAppCloudApiTestConfiguration::$to_phone_number_id,
+            'This text will receive a reaction',
+            true
+        );
+
+        $messageId = $textMessage->decodedBody()['messages'][0]['id'];
+
+        $response = $this->whatsapp_app_cloud_api->sendReaction(
+            WhatsAppCloudApiTestConfiguration::$to_phone_number_id,
+            $messageId,
+            '👍'
+        );
+
+        $this->assertEquals(200, $response->httpStatusCode());
+        $this->assertEquals(false, $response->isError());
+    }
+
+    public function test_send_remove_reaction_message()
+    {
+        $textMessage = $this->whatsapp_app_cloud_api->sendTextMessage(
+            WhatsAppCloudApiTestConfiguration::$to_phone_number_id,
+            'This text will receive a reaction and then the reaction will be removed',
+            true
+        );
+
+        $messageId = $textMessage->decodedBody()['messages'][0]['id'];
+
+        $reactToMessage = $this->whatsapp_app_cloud_api->sendReaction(
+            WhatsAppCloudApiTestConfiguration::$to_phone_number_id,
+            $messageId,
+            '👍'
+        );
+
+        // sleep(3); // can delay next request to see reaction
+
+        $response = $this->whatsapp_app_cloud_api->sendReaction(
+            WhatsAppCloudApiTestConfiguration::$to_phone_number_id,
+            $messageId
         );
 
         $this->assertEquals(200, $response->httpStatusCode());
@@ -334,7 +450,7 @@ final class WhatsAppCloudApiTest extends TestCase
     {
         $response = $this->whatsapp_app_cloud_api->updateBusinessProfile([
             'about' => 'About text',
-            'email' => 'my-email@email.com'
+            'email' => 'my-email@email.com',
         ]);
 
         $this->assertEquals(200, $response->httpStatusCode());

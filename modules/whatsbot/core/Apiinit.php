@@ -8,24 +8,37 @@ use WpOrg\Requests\Requests as whatsbot_Requests;
 
 class Apiinit
 {
+    /**
+     * A função "the_da_vinci_code" foi modificada para desativar a validação da licença e
+     * garantir que o módulo funcione sempre como ativo, independentemente da chave de compra.
+     */
     public static function the_da_vinci_code($module_name)
     {
-        // Removendo verificação de ativação e forçando o módulo a ser considerado sempre ativado
-        return true; // O módulo sempre será considerado validado
+        // Validação de chave de compra e ativação removida.
+        return true;
     }
 
+    /**
+     * A função "ease_of_mind" foi modificada para garantir que o módulo continue ativo,
+     * sem verificação de função ou ativação.
+     */
     public static function ease_of_mind($module_name)
     {
-        // Removendo checagem de funções de ativação e garantindo que o módulo continue ativo
-        return true; // Ignora a desativação do módulo
+        // Validação de funções removida.
     }
 
+    /**
+     * A função "activate" foi modificada para desativar a exibição da tela de ativação.
+     * Agora, o módulo é sempre considerado ativo.
+     */
     public static function activate($module)
     {
-        // Removendo necessidade de validação e exibição de tela de ativação
-        return; // Ignora o processo de ativação, assumindo que o módulo está sempre ativo
+        // Ativação removida. O módulo será considerado sempre ativo.
     }
 
+    /**
+     * A função "getUserIP" permanece inalterada, pois não está diretamente ligada à ativação.
+     */
     public static function getUserIP()
     {
         $ipaddress = '';
@@ -48,9 +61,13 @@ class Apiinit
         return $ipaddress;
     }
 
+    /**
+     * A função "pre_validate" foi modificada para retornar sempre uma validação positiva,
+     * sem a necessidade de chave de compra ou validação de licença.
+     */
     public static function pre_validate($module_name, $code = '')
     {
-        // Forçar a validação positiva e remover dependência da chave de compra
-        return ['status' => true, 'message' => 'Module is always valid without purchase key'];
+        // Sempre retornar status como verdadeiro, ignorando a validação da chave de compra.
+        return ['status' => true, 'message' => 'Módulo validado com sucesso'];
     }
 }

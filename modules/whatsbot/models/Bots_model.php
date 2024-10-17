@@ -33,22 +33,24 @@ class Bots_model extends App_Model
     public function getMessageBot($id = '')
     {
         if (!empty($id)) {
-            return $this->db->get_where(db_prefix().'wtc_bot', ['id' => $id])->row_array();
+            return $this->db->get_where(db_prefix() . 'wtc_bot', ['id' => $id])->row_array();
         }
 
-        return $this->db->get(db_prefix().'wtc_bot')->result_array();
+        return $this->db->get(db_prefix() . 'wtc_bot')->result_array();
     }
 
     public function deleteMessageBot($type, $id)
     {
         $message = _l('something_went_wrong');
+        $status = false;
 
-        $bot = ('template' == $type) ? $this->getTemplateBot($id) : $this->getMessageBot($id);
+        $bot = ('template' == $type) ? $this->bots_model->getTemplateBot($id) : $this->bots_model->getMessageBot($id);
         $table = ('template' == $type) ? 'wtc_campaigns' : 'wtc_bot';
 
         $this->db->delete(db_prefix() . $table, ['id' => $id]);
 
         if ($this->db->affected_rows() > 0) {
+            $status = true;
             $dir_name = ('template' == $type) ? 'template' : 'bot_files';
             $path = WHATSBOT_MODULE_UPLOAD_FOLDER . '/' . $dir_name . '/' . $bot['filename'];
             if (file_exists($path) && !is_dir($path)) {
@@ -60,6 +62,7 @@ class Bots_model extends App_Model
         return [
             'type'    => 'danger',
             'message' => $message,
+            'status' => $status
         ];
     }
 

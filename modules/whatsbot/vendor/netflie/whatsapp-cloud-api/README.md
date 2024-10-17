@@ -61,7 +61,7 @@ $whatsapp_cloud_api->sendDocument('34676104574', $link_id, $document_name, $docu
 ```php
 <?php
 
-$whatsapp_cloud_api->sendTemplate('34676104574', 'hello_world', 'en_US'); // Language is optional
+$whatsapp_cloud_api->sendTemplate('34676104574', 'hello_world', 'en_US'); // If not specified, Language will be default to en_US and otherwise it will be required.
 ```
 
 You also can build templates with parameters:
@@ -179,6 +179,15 @@ $whatsapp_cloud_api->sendSticker('<destination-phone-number>', $media_id);
 $whatsapp_cloud_api->sendLocation('<destination-phone-number>', $longitude, $latitude, $name, $address);
 ```
 
+### Send a location request message
+
+```php
+<?php
+
+$body = 'Let\'s start with your pickup. You can either manually *enter an address* or *share your current location*.';
+$whatsapp_cloud_api->sendLocationRequest('<destination-phone-number>', $body);
+```
+
 ### Send a contact message
 
 ```php
@@ -241,6 +250,23 @@ $whatsapp_cloud_api->sendCtaUrl(
 );
 ```
 
+### Send Catalog Message
+
+```php
+<?php
+
+$body = 'Hello! Thanks for your interest. Ordering is easy. Just visit our catalog and add items you\'d like to purchase.';
+$footer = 'Best grocery deals on WhatsApp!';
+$sku_thumbnail = '<product-sku-id>'; // product sku id to use as header thumbnail 
+
+$whatsapp_cloud_api->sendCatalog(
+    '<destination-phone-number>',
+    $body,
+    $footer, // optional
+    $sku_thumbnail // optional
+);
+```
+
 ### Send a button reply message
 
 ```php
@@ -271,6 +297,49 @@ $whatsapp_cloud_api->sendButton(
 );
 ```
 
+### Send Multi Product Message
+```php
+<?php
+
+use Netflie\WhatsAppCloudApi\WhatsAppCloudApi;
+use Netflie\WhatsAppCloudApi\Message\MultiProduct\Row;
+use Netflie\WhatsAppCloudApi\Message\MultiProduct\Section;
+use Netflie\WhatsAppCloudApi\Message\MultiProduct\Action;
+
+$rows_section_1 = [
+    new Row('<product-sku-id>'),
+    new Row('<product-sku-id>'),
+    // etc
+];
+
+$rows_section_2 = [
+    new Row('<product-sku-id>'),
+    new Row('<product-sku-id>'),
+    new Row('<product-sku-id>'),
+    // etc
+];
+
+$sections = [
+    new Section('Section 1', $rows_section_1),
+    new Section('Section 2', $rows_section_2),
+];
+
+$action = new Action($sections);
+$catalog_id = '<catalog-id>';
+$header = 'Grocery Collections';
+$body = 'Hello! Thanks for your interest. Here\'s what we can offer you under our grocery collection. Thank you for shopping with us.';
+$footer = 'Subject to T&C';
+
+$whatsapp_cloud_api->sendMultiProduct(
+    '<destination-phone-number>',
+    $catalog_id,
+    $action,
+    $header,
+    $body,
+    $footer // optional
+);
+```
+
 ### Replying messages
 
 You can reply a previous sent message:
@@ -284,6 +353,27 @@ $whatsapp_cloud_api
         '34676104574',
         'Hey there! I\'m using WhatsApp Cloud API. Visit https://www.netflie.es'
     );
+```
+
+### React to a Message
+
+You can react to a message from your conversations if you know the messageid
+
+```php
+<?php
+
+$whatsapp_cloud_api->sendReaction(
+        '<destination-phone-number>',
+        '<message-id-to-react-to>',
+        '👍', // the emoji
+    );
+
+// Unreact to a message
+$whatsapp_cloud_api->sendReaction(
+        '<destination-phone-number>',
+        '<message-id-to-unreact-to>'
+    );
+
 ```
 
 ## Media messages
@@ -407,12 +497,15 @@ Fields list: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/b
 - Send Videos
 - Send Stickers
 - Send Locations
+- Send Location Request
 - Send Contacts
 - Send Lists
 - Send Buttons
+- Send Multi Product Message
 - Upload media resources to WhatsApp servers
 - Download media resources from WhatsApp servers
 - Mark messages as read
+- React to a Message
 - Get/Update Business Profile
 - Webhook verification
 - Webhook notifications

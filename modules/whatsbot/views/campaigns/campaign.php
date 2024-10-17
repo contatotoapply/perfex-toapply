@@ -26,8 +26,11 @@
                                     <?php echo _l('or'); ?>
                                 </span>
                             </div>
-                            <?php echo render_select('lead_ids[]', $leads, ['id', 'name'], 'leads', $campaign['lead_ids'] ?? '' ?? '', ['multiple' => 1, 'data-actions-box' => 1, 'data-width' => '100%', 'data-live-search' => 1], [], 'hide lead_ids', '', false); ?>
-                            <?php echo render_select('contact_ids[]', $contacts, ['id', ['firstname', 'lastname']], 'contacts', $campaign['contact_ids'] ?? '' ?? '', ['multiple' => 1, 'data-actions-box' => 1, 'data-width' => '100%', 'data-live-search' => 1], [], 'hide contact_ids', '', false); ?>
+                            <?php echo render_select('status', [], [], 'status', $campaign['status'] ?? '', [], [], 'lead_status col-md-6 no-padding-left hide'); ?>
+                            <?php echo render_select('source', [], [], 'source', $campaign['source'] ?? '', [], [], 'lead_source col-md-6 no-padding-right hide'); ?>
+                            <?php echo render_select('groups[]', [], [], 'groups', $campaign['groups'] ?? '', ['multiple' => 1, 'data-actions-box' => 1, 'data-width' => '100%', 'data-live-search' => 1], [], 'groups hide', '', false); ?>
+                            <?php echo render_select('lead_ids[]', [], [], 'leads', $campaign['lead_ids'] ?? '' ?? '', ['multiple' => 1, 'data-actions-box' => 1, 'data-width' => '100%', 'data-live-search' => 1], [], 'hide lead_ids', '', false); ?>
+                            <?php echo render_select('contact_ids[]', [], [], 'contacts', $campaign['contact_ids'] ?? '' ?? '', ['multiple' => 1, 'data-actions-box' => 1, 'data-width' => '100%', 'data-live-search' => 1], [], 'hide contact_ids', '', false); ?>
                             <hr class="hr-panel-separator">
                         </div>
                         <?php echo render_datetime_input('scheduled_send_time', 'scheduled_send_time', $campaign['scheduled_send_time'] ?? '', ['data-date-min-date' => date('Y-m-d')]); ?>
@@ -115,7 +118,7 @@
                 },
             },
         },
-        'document' : {
+        'document': {
             required: {
                 depends: function() {
                     return (!$('.campaign_document').hasClass('hide')) ? true : false;
@@ -148,17 +151,51 @@
     $('#rel_type').on('change', function() {
         var value = '';
         value = $(this).val();
-        $('.relation_wrapper').removeClass('hide');
-        $('.select_all').removeClass('hide');
-        $('.orhr').removeClass('hide');
+        $('.relation_wrapper, .select_all, .orhr').removeClass('hide');
+        $('.lead_status, .lead_source, .groups').addClass('hide');
         if (value == 'leads') {
             $('.lead_ids').removeClass('hide');
             $('.contact_ids').addClass('hide');
             $('[for="select_all"]').attr('data-original-title', "<?php echo _l('select_all_note_leads'); ?>");
+            get_leads();
+            $.ajax({
+                url: `${admin_url}whatsbot/campaigns/get_lead_data`,
+                type: 'POST',
+                dataType: 'json',
+            }).done(function(res) {
+                var status = '<?= isset($campaign) && !empty($campaign['status']) ? $campaign['status'] : '' ?>';
+                var source = '<?= isset($campaign) && !empty($campaign['source']) ? $campaign['source'] : '' ?>';
+                $.each(res.status, function(index, val) {
+                    $('select[name="status"]').append(`<option value='${val.id}'>${val.name}</option>`);
+                });
+                $.each(res.source, function(index, val) {
+                    $('select[name="source"]').append(`<option value='${val.id}'>${val.name}</option>`);
+                });
+                $('select[name="status"], select[name="source"]').selectpicker('refresh');
+                get_leads(status, source);
+                $('select[name="status"]').val(status).selectpicker('refresh');
+                $('select[name="source"]').val(source).selectpicker('refresh');
+                $('.lead_status, .lead_source').removeClass('hide');
+            });
         } else if (value == 'contacts') {
             $('.contact_ids').removeClass('hide');
             $('.lead_ids').addClass('hide');
             $('[for="select_all"]').attr('data-original-title', "<?php echo _l('select_all_note_contacts'); ?>");
+            get_contacts();
+            $.ajax({
+                url: `${admin_url}whatsbot/campaigns/get_contacts_gropus`,
+                type: 'POST',
+                dataType: 'json',
+            }).done(function(res) {
+                var groups = '<?= isset($campaign) && !empty($campaign['group']) ? $campaign['group'] : '[]' ?>';
+                $.each(res, function(index, val) {
+                    $('select[name="groups[]"]').append(`<option value='${val.id}'>${val.name}</option>`);
+                });
+                $('select[name="groups[]"]').selectpicker('refresh');
+                get_contacts(groups);
+                $('select[name="groups[]"]').val(JSON.parse(groups)).selectpicker('refresh');
+                $('.groups').removeClass('hide');
+            });
         } else {
             $('.contact_ids, .lead_ids, .select_all, .orhr, .relation_wrapper').addClass('hide');
             $('#contact_ids, lead_ids').val('').trigger('change').selectpicker('refresh');
@@ -166,6 +203,56 @@
         $('[for="select_all"]').text("<?php echo _l('select_all'); ?>" + ' ' + $('#rel_type :selected').text());
         $('#select_all').trigger('change');
     });
+
+    $('select[name="status"], select[name="source"]').on('change ', function() {
+        var status = $('select[name="status"]').val();
+        var source = $('select[name="source"]').val();
+        get_leads(status, source);
+    });
+
+    $('select[name="groups[]"]').on('change', function() {
+        var groups = $('select[name="groups[]"]').val();
+        get_contacts(groups);
+    });
+
+    function get_leads(status = '', source = '') {
+        $.ajax({
+            url: `${admin_url}whatsbot/campaigns/get_leads`,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                status: status,
+                source: source,
+            }
+        }).done(function(res) {
+            $('select[name="lead_ids[]"]').empty();
+            $.each(res, function(index, val) {
+                $('select[name="lead_ids[]"]').append(`<option value='${val.id}'>${val.name}</option>`);
+            });
+            var lead_ids = '<?= isset($campaign) && !empty($campaign['lead_ids']) ? json_encode($campaign['lead_ids']) : '[]' ?>';
+            $('select[name="lead_ids[]"]').val(JSON.parse(lead_ids)).selectpicker('refresh');
+            $('#select_all').trigger('change');
+        });
+    }
+
+    function get_contacts(group = '') {
+        $.ajax({
+            url: `${admin_url}whatsbot/campaigns/get_contacts`,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                group: group,
+            }
+        }).done(function(res) {
+            $('select[name="contact_ids[]"]').empty();
+            $.each(res, function(index, val) {
+                $('select[name="contact_ids[]"]').append(`<option value='${val.id}'>${val.firstname} ${val.lastname}</option>`);
+            });
+            var contact_ids = '<?= isset($campaign) && !empty($campaign['contact_ids']) ? json_encode($campaign['contact_ids']) : '[]' ?>';
+            $('select[name="contact_ids[]"]').val(JSON.parse(contact_ids)).selectpicker('refresh');
+            $('#select_all').trigger('change')
+        });
+    }
 
     $('#select_all').on('change', function() {
         let relType = $('#rel_type').val();
@@ -175,6 +262,9 @@
 
         leadIds.prop('disabled', false);
         contactIds.prop('disabled', false);
+        $('select[name="status"]').prop('disabled', false);
+        $('select[name="source"]').prop('disabled', false);
+        $('select[name="groups[]"]').prop('disabled', false);
 
         if (relType === 'leads') {
             leadIds.trigger('change');
@@ -185,12 +275,14 @@
         if (isChecked) {
             leadIds.prop('disabled', true);
             contactIds.prop('disabled', true);
+            $('select[name="status"]').prop('disabled', true);
+            $('select[name="source"]').prop('disabled', true);
+            $('select[name="groups[]"]').prop('disabled', true);
             let totalCount = (relType == 'leads') ? "<?php echo count($leads ?? []) . ' ' . _l('leads'); ?>" : "<?php echo count($contacts ?? []) . ' ' . _l('contacts'); ?>";
             $('.totalCount').text(totalCount);
         }
 
-        leadIds.selectpicker('refresh');
-        contactIds.selectpicker('refresh');
+        $('#lead_ids\\[\\], #contact_ids\\[\\], select[name="status"], select[name="source"], select[name="groups[]"]').selectpicker('refresh');
     });
 
     $('#lead_ids\\[\\], #contact_ids\\[\\]').on('change', function() {
@@ -208,8 +300,7 @@
     });
 
     // trigger apply button on click for edit time
-    <?php if (isset($campaign)) { ?>
-        $('#template_id, #send_now, #rel_type').trigger('change');
+    <?php if (isset($campaign)) { ?> $('#template_id, #send_now, #rel_type').trigger('change');
         setTimeout(function() {
             $('.header_image').trigger('change');
             $('.header_document').trigger('change');

@@ -10,6 +10,8 @@ class Whatsbot extends AdminController
     use modules\whatsbot\traits\Whatsapp;
     use modules\whatsbot\traits\OpenAiTraits;
 
+    public $module_version;
+
     /**
      * Constructor for Whatsbot controller.
      * Loads necessary models.
@@ -19,6 +21,8 @@ class Whatsbot extends AdminController
         parent::__construct();
         $this->load->model(['whatsbot_model', 'interaction_model']);
         $this->load->config('chat_config');
+        $module = $this->db->get_where(db_prefix() . 'modules', ['module_name' => 'whatsbot'])->row_array();
+        $this->module_version = $module['installed_version'];
     }
 
     /**
@@ -103,6 +107,7 @@ class Whatsbot extends AdminController
         }
 
         $data['title'] = _l('chat');
+        $data['module_version'] = $this->module_version;
         $data['members'] = $this->staff_model->get();
         $this->load->view('interaction', $data);
     }

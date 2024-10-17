@@ -4,10 +4,13 @@ defined('BASEPATH') || exit('No direct script access allowed');
 
 class Bot_flow extends AdminController
 {
+    public $module_version;
     public function __construct()
     {
         parent::__construct();
         $this->load->model(['bot_flow_model']);
+        $module = $this->db->get_where(db_prefix() . 'modules', ['module_name' => 'whatsbot'])->row_array();
+        $this->module_version = $module['installed_version'];
     }
 
     public function index()
@@ -28,6 +31,7 @@ class Bot_flow extends AdminController
         }
 
         $data['title'] = _l('bot_flow');
+        $data['module_version'] = $this->module_version;
 
         if (!empty($id)) {
             $data['flow'] = $this->bot_flow_model->get($id);

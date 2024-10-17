@@ -30,6 +30,11 @@
                     <?php echo _l('ai_integration'); ?>
                 </a>
             </li>
+            <li role="presentation" class="">
+                <a href="#clear_chat_history" aria-controls="clear_chat_history" role="tab" data-toggle="tab">
+                    <?php echo _l('auto_clear_chat_history'); ?>
+                </a>
+            </li>
         </ul>
     </div>
 </div>
@@ -121,6 +126,38 @@
         <div class="row openai_model">
             <div class="col-md-6">
                 <?php echo render_select('settings[wb_openai_model]', config_item('openai_models'), ['key', 'value'], 'chat_model', get_option('wb_openai_model'), [], [], '', '', false); ?>
+            </div>
+        </div>
+    </div>
+    <div role="tabpanel" class="tab-pane" id="clear_chat_history">
+        <div class="row">
+            <div class="form-group col-md-12">
+                <label for="enable_clear_chat_history"><?php echo _l('enable_auto_clear_chat_history'); ?></label>
+                <div class="onoffswitch">
+                    <input type="checkbox" value="1" class="onoffswitch-checkbox" id="enable_clear_chat_history" name="settings[enable_clear_chat_history]" <?php echo ('1' == get_option('enable_clear_chat_history')) ? 'checked' : ''; ?>>
+                    <label class="onoffswitch-label" for="enable_clear_chat_history"></label>
+                </div>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="settings[wb_auto_clear_time]" class="control-label"><?php echo _l('auto_clear_time'); ?></label>
+                <div class="input-group">
+                    <input type="number" id="settings[wb_auto_clear_time]" name="settings[wb_auto_clear_time]" class="form-control" min='1' value="<?php echo get_option('wb_auto_clear_time'); ?>">
+                    <span class="input-group-addon"><?= _l('days') ?></span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="alert alert-warning">
+                    <?= _l('clear_chat_history_note'); ?>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="alert alert-danger">
+                    This feature requires a properly configured cron job. Before activating the feature, make sure that the <a
+                        href="<?php echo admin_url('settings?group=cronjob'); ?>">cron job</a> is configured as explanation in
+                    the documentation.
+                </div>
             </div>
         </div>
     </div>

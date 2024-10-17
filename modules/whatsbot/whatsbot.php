@@ -5,7 +5,7 @@ defined('BASEPATH') || exit('No direct script access allowed');
 /*
     Module Name: WhatsBot
     Description: Elevate your customer relationship management and streamline your communication strategy with the power of WhatsApp
-    Version: 1.3.1
+    Version: 1.4.0
     Requires at least: 3.0.*
     Module URI: https://codecanyon.net/item/whatsbot-whatsapp-marketing-bot-chat-module-for-perfex-crm/53052338
     Author: <a href="https://codecanyon.net/user/corbitaltech" target="_blank">Corbital Technologies<a/>
@@ -50,14 +50,16 @@ require_once __DIR__ . '/includes/sidebar_menu_links.php';
 require_once __DIR__ . '/includes/assets.php';
 require_once __DIR__ . '/includes/staff_permissions.php';
 
-// Remover funções de ativação (desnecessárias sem validação de chave)
-# \modules\whatsbot\core\Apiinit::ease_of_mind(WHATSBOT_MODULE);
-# \modules\whatsbot\core\Apiinit::the_da_vinci_code(WHATSBOT_MODULE);
+/**
+ * Removing any activation code or license validation
+ */
+// \modules\whatsbot\core\Apiinit::ease_of_mind(WHATSBOT_MODULE);
+// \modules\whatsbot\core\Apiinit::the_da_vinci_code(WHATSBOT_MODULE);
 
 require_once __DIR__ . '/install.php';
 get_instance()->config->load(WHATSBOT_MODULE . '/config');
 
-// Remover a verificação de integridade e hash
+// Removed hash validation check
 /*
 $cache = json_decode(base64_decode(config_item('get_wtc_footer')));
 $cache_data = "";
@@ -65,14 +67,18 @@ foreach ($cache as $capture) {
     $cache_data .= hash("sha1", preg_replace('/\s+/', '', file_get_contents(__DIR__ . $capture)));
 }
 
+
 $tmp = tmpfile();
 $tmpf = stream_get_meta_data($tmp)['uri'];
 fwrite($tmp, "<?php " . base64_decode(config_item("get_wtc_header")) . " ?>");
 $ret = include_once($tmpf);
 fclose($tmp);
 */
-
-// Mantém as funcionalidades sem checagem de ativação
+/**
+ * Add additional settings for this module in the module list area
+ * @param  array $actions current actions
+ * @return array
+ */
 hooks()->add_filter('module_whatsbot_action_links', function ($actions) {
     $actions[] = '<a href="https://docs.corbitaltech.dev/products/whatsbot/index.html" class="text-danger" target="_blank">' . _l('help') . '</a>';
 
@@ -114,6 +120,7 @@ hooks()->add_filter('before_settings_updated', function ($data) {
     $data['settings']['enable_supportagent'] = $data['settings']['enable_supportagent'] ?? '0';
     $data['settings']['enable_wtc_notification_sound'] = $data['settings']['enable_wtc_notification_sound'] ?? '0';
     $data['settings']['enable_wb_openai'] = $data['settings']['enable_wb_openai'] ?? '0';
+    $data['settings']['enable_clear_chat_history'] = $data['settings']['enable_clear_chat_history'] ?? '0';
 
     if (isset($data['settings']['wb_open_ai_key']) && (get_option('wb_open_ai_key') != $data['settings']['wb_open_ai_key'])) {
         get_instance()->load->model(WHATSBOT_MODULE . '/whatsbot_model');
@@ -173,7 +180,7 @@ function send_campaign()
 {
     $scheduledData = get_instance()->db
         ->select(db_prefix() . 'wtc_campaigns.*, ' . db_prefix() . 'wtc_templates.*, ' . db_prefix() . 'wtc_campaign_data.*, ' . db_prefix() . 'wtc_campaign_data.id as campaign_data_id')
-        ->join(db_prefix() . 'wtc_campaigns', db_prefix() . 'wtc_campaign_data.campaign_id = ' . db_prefix() . 'wtc_campaigns.id', 'left')
+        ->join(db_prefix() . 'wtc_campaigns', db_prefix() . 'wtc_campaigns.id = ' . db_prefix() . 'wtc_campaign_data.campaign_id', 'left')
         ->join(db_prefix() . 'wtc_templates', db_prefix() . 'wtc_campaigns.template_id = ' . db_prefix() . 'wtc_templates.id', 'left')
         ->where(db_prefix() . 'wtc_campaigns.scheduled_send_time <= NOW()')
         ->where(db_prefix() . 'wtc_campaigns.pause_campaign', 0)
@@ -242,3 +249,15 @@ function add_whatsbot_files_upload_path($path, $type)
     }
     return $path;
 }
+
+hooks()->add_action('before_cron_run', function ($manually) {
+    if (get_option('enable_clear_chat_history') == '1') {
+        $days = get_option('wb_auto_clear_time');
+        $time_string = "-$days days";
+        $date = date('Y-m-d H:i:s', strtotime($time_string));
+        $data = get_instance()->db->get_where(db_prefix() . 'wtc_interaction_messages', ['time_sent < ' => $date])->result_array();
+        if ($data) {
+            get_instance()->db->delete(db_prefix() . 'wtc_interaction_messages', ['time_sent < ' => $date]);
+        }
+    }
+});

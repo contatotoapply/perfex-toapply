@@ -7,9 +7,21 @@ class Whatsbot_model extends App_Model
     use modules\whatsbot\traits\Whatsapp;
     use modules\whatsbot\traits\OpenAiTraits;
 
+    protected $pusher;
+
     public function __construct()
     {
         parent::__construct();
+        $this->load->model('interaction_model');
+
+        if (!empty(get_option('pusher_app_key')) || !empty(get_option('pusher_app_secret')) || !empty(get_option('pusher_app_id'))) {
+            $this->pusher = new Pusher\Pusher(
+                get_option('pusher_app_key'),
+                get_option('pusher_app_secret'),
+                get_option('pusher_app_id'),
+                ['cluster' => get_option('pusher_cluster') ?? '']
+            );
+        }
     }
 
     public function load_templates($accessToken = '', $accountId = '')
@@ -207,7 +219,17 @@ class Whatsbot_model extends App_Model
     public function addChatMessage($chatMessage)
     {
         if (!empty($chatMessage)) {
-            return $this->db->insert_batch(db_prefix() . 'wtc_interaction_messages', $chatMessage);
+            $affected_rows = 0;
+            for ($i = 0; $i < count($chatMessage); $i++) {
+                $message_id = $this->interaction_model->insert_interaction_message($chatMessage[$i]);
+                if (!empty($message_id) && !empty(get_option('pusher_app_key')) || !empty(get_option('pusher_app_secret')) || !empty(get_option('pusher_app_id'))) {
+                    $this->pusher->trigger('interactions-channel', 'new-message-event', [
+                        'interaction' => $this->interaction_model->get_new_interaction_message($chatMessage[$i]['interaction_id'], $message_id)
+                    ]);
+                    $affected_rows++;
+                }
+            }
+            return $affected_rows;
         }
     }
 
