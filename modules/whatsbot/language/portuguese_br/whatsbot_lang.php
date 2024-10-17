@@ -3,7 +3,7 @@
 defined('BASEPATH') || exit('No direct script access allowed');
 
 // connect account
-$lang['whatsbot'] = 'WhatsBot';
+$lang['whatsbot'] = 'Whats Apply';
 $lang['connect_account'] = 'Conectar Conta';
 $lang['connect_whatsapp_business'] = 'Conectar WhatsApp Business';
 $lang['campaigning'] = 'Campanha';
@@ -146,7 +146,7 @@ $lang['bot'] = 'Bot';
 $lang['bot_delay_response'] = 'Mensagem enviada quando um atraso na resposta é esperado';
 $lang['bot_delay_response_placeholder'] = 'Dê-me um momento, terei a resposta em breve';
 
-$lang['whatsbot'] = 'WhatsBot';
+$lang['whatsbot'] = 'Whats Apply';
 
 //campaigns
 $lang['relation_type'] = 'Tipo de Relação';
